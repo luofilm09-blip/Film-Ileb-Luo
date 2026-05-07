@@ -18,9 +18,10 @@ export default function Header() {
                 <input
                   className="search_search_input"
                   type="text"
-                  placeholder="搜索优酷"
+                  placeholder="SEARCH FILM ILEB LUO"
                   value={searchValue}
                   onChange={(e) => setSearchValue(e.target.value)}
+                  style={{ fontFamily: 'Arial, sans-serif', textTransform: 'uppercase' }}
                 />
               </div>
             </div>
@@ -35,7 +36,7 @@ export default function Header() {
               src="https://gw.alicdn.com/imgextra/i2/O1CN01G2pBlc1jH83k0Uw4y_!!6000000004522-2-tps-72-72.png"
               alt="VIP"
             />
-            <div className="crmvip_vip_pop_content">续费会员</div>
+            <div className="crmvip_vip_pop_content" style={{ fontFamily: 'Arial, sans-serif' }}>RENEW VIP</div>
           </a>
         </div>
 
@@ -46,7 +47,7 @@ export default function Header() {
             src="https://img.alicdn.com/imgextra/i3/O1CN01E71iNM29PXJkAdEx1_!!6000000008060-2-tps-48-48.png"
             alt=""
           />
-          <div className="filter_text">筛选</div>
+          <div className="filter_text" style={{ fontFamily: 'Arial, sans-serif' }}>FILTER</div>
         </div>
 
         {/* History */}
@@ -54,15 +55,15 @@ export default function Header() {
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
             <circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/>
           </svg>
-          <div className="historyrecord_text">历史</div>
+          <div className="historyrecord_text" style={{ fontFamily: 'Arial, sans-serif' }}>HISTORY</div>
         </div>
 
-        {/* Client */}
+        {/* Client / App */}
         <div className="useiku_iku_box">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#888" strokeWidth="1.5">
             <rect x="2" y="3" width="20" height="14" rx="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
           </svg>
-          <div className="useiku_text">客户端</div>
+          <div className="useiku_text" style={{ fontFamily: 'Arial, sans-serif' }}>APP</div>
         </div>
 
         {/* User */}
@@ -72,7 +73,7 @@ export default function Header() {
               src="https://img.alicdn.com/imgextra/i4/O1CN01sm6Pik1QpxWLtcGPd_!!6000000002026-2-tps-180-180.png"
               alt=""
             />
-            <span>登录</span>
+            <span style={{ fontFamily: 'Arial, sans-serif' }}>LOG IN</span>
           </div>
         </div>
       </div>

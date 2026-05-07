@@ -10,14 +10,19 @@ export default function Home() {
 
       {/* Feed sections */}
       <VideoRow
-        title="猜你在追"
+        title="KEEP WATCHING"
         cards={guessFollowingCards}
-        keyword="超高清内容专区"
+        keyword="4K ULTRA HD ZONE"
       />
 
       <VideoRow
-        title="古风恋爱剧，原来这么上头"
+        title="ANCIENT ROMANCE — SO ADDICTIVE"
         cards={ancientRomanceCards}
+      />
+
+      <VideoRow
+        title="HOT MOVIES THIS WEEK"
+        cards={[...ancientRomanceCards].reverse().slice(0, 8)}
       />
 
       {/* Footer */}
@@ -30,11 +35,11 @@ export default function Home() {
         }}
       >
         <div style={{ display: 'flex', gap: 20, justifyContent: 'center', marginBottom: 10, flexWrap: 'wrap' }}>
-          {['关于优酷', '帮助中心', '用户协议', '隐私政策', '版权声明', '意见反馈'].map((link) => (
+          {['ABOUT US', 'HELP CENTER', 'TERMS OF SERVICE', 'PRIVACY POLICY', 'COPYRIGHT', 'FEEDBACK'].map((link) => (
             <a
               key={link}
               href="#"
-              style={{ fontSize: 12, color: '#444', textDecoration: 'none' }}
+              style={{ fontSize: 11, color: '#444', textDecoration: 'none', fontFamily: 'Arial, sans-serif' }}
               onMouseEnter={(e) => { (e.target as HTMLElement).style.color = '#888'; }}
               onMouseLeave={(e) => { (e.target as HTMLElement).style.color = '#444'; }}
             >
@@ -42,8 +47,8 @@ export default function Home() {
             </a>
           ))}
         </div>
-        <div style={{ fontSize: 11, color: '#333' }}>
-          ©2025 优酷 youku.com 版权所有
+        <div style={{ fontSize: 11, color: '#333', fontFamily: 'Arial, sans-serif' }}>
+          © 2025 FILM ILEB LUO — ALL RIGHTS RESERVED
         </div>
       </div>
     </div>

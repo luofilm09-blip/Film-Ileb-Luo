@@ -1,8 +1,10 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
+import { useLocation } from 'wouter';
 import { swiperSlides, bulletCards } from '../data/content';
 
 export default function HeroCarousel() {
   const [current, setCurrent] = useState(0);
+  const [, navigate] = useLocation();
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
   const goTo = useCallback((idx: number) => {
@@ -38,7 +40,7 @@ export default function HeroCarousel() {
             <div key={s.id} className={`swiper-slide${i === current ? ' active' : ''}`}>
               <div className="swiper_item_img_wrap_2vvR2">
                 <div className={s.id === '7' ? 'swiper_political_img_QmWai' : 'swiper_show_img_qwMgx'}>
-                  <a href="#">
+                  <a href="#" onClick={(e) => { e.preventDefault(); navigate('/play/1'); }}>
                     <img
                       src={s.image}
                       alt=""
@@ -71,7 +73,7 @@ export default function HeroCarousel() {
                   />
                 </div>
               ) : slide.titleText ? (
-                <div className="swiper_item_title_1gdGI">{slide.titleText}</div>
+                <div className="swiper_item_title_1gdGI" style={{ fontFamily: 'Arial, sans-serif', textTransform: 'uppercase' }}>{slide.titleText}</div>
               ) : null}
             </div>
 
@@ -90,20 +92,20 @@ export default function HeroCarousel() {
                           'tag1__xbWn'
                         }`}
                       >
-                        <span>{tag.text}</span>
+                        <span style={{ fontFamily: 'Arial, sans-serif' }}>{tag.text}</span>
                       </div>
                     ))}
                   </div>
                   {slide.desc && (
-                    <div className="swiper_item_desc_1pk_I no_reason_p0187">{slide.desc}</div>
+                    <div className="swiper_item_desc_1pk_I no_reason_p0187" style={{ fontFamily: 'Arial, sans-serif' }}>{slide.desc}</div>
                   )}
                 </div>
                 <div className="swiper_item_control_1C-Qx">
                   <div className="control_btn_wrap_3w0t8">
-                    <a href="#">
+                    <a href="#" onClick={(e) => { e.preventDefault(); navigate('/play/1'); }}>
                       <div className="swiper_item_play_btn_3oJP-">
                         <span className="play_icon_2lZmx">▶</span>
-                        <span className="play_btn_text_1x4lT">播放</span>
+                        <span className="play_btn_text_1x4lT" style={{ fontFamily: 'Arial, sans-serif' }}>PLAY</span>
                       </div>
                     </a>
                   </div>
@@ -153,22 +155,22 @@ export default function HeroCarousel() {
                                 bullet.badgeType === 'svip' ? 'tag_SVIP_COLORFUL_2rSkq' :
                                 'tag_ad_XOHyW'
                               } null`}>
-                                <span>{bullet.badgeText}</span>
+                                <span style={{ fontFamily: 'Arial, sans-serif' }}>{bullet.badgeText}</span>
                               </div>
                             )}
 
                             {/* Status */}
                             {bullet.statusText && (
                               <div className="newSummaryLeft_2WuF0 undefined">
-                                <div className="newSummaryLeftText_22TVB">{bullet.statusText}</div>
-                                <div className="newSummaryLeftSubTitle_3gXo1">{bullet.statusSub}</div>
+                                <div className="newSummaryLeftText_22TVB" style={{ fontFamily: 'Arial, sans-serif' }}>{bullet.statusText}</div>
+                                <div className="newSummaryLeftSubTitle_3gXo1" style={{ fontFamily: 'Arial, sans-serif' }}>{bullet.statusSub}</div>
                               </div>
                             )}
 
                             {/* Episode */}
                             {bullet.episodeText && (
                               <div className="lb_texts_wrap_1o6QN">
-                                <span className="lb_texts_23IEZ">{bullet.episodeText}</span>
+                                <span className="lb_texts_23IEZ" style={{ fontFamily: 'Arial, sans-serif' }}>{bullet.episodeText}</span>
                               </div>
                             )}
                           </div>
