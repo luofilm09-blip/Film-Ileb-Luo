@@ -1,15 +1,14 @@
 import { useRef, useState } from 'react';
-import { ChevronLeft, ChevronRight } from 'lucide-react';
 import VideoCard from './VideoCard';
-import type { VideoCard as VideoCardType } from '../data/content';
+import type { FeedCard } from '../data/content';
 
 interface Props {
   title: string;
-  cards: VideoCardType[];
-  cardWidth?: number;
+  cards: FeedCard[];
+  keyword?: string;
 }
 
-export default function VideoRow({ title, cards, cardWidth = 148 }: Props) {
+export default function VideoRow({ title, cards, keyword }: Props) {
   const scrollRef = useRef<HTMLDivElement>(null);
   const [canScrollLeft, setCanScrollLeft] = useState(false);
   const [canScrollRight, setCanScrollRight] = useState(true);
@@ -23,167 +22,69 @@ export default function VideoRow({ title, cards, cardWidth = 148 }: Props) {
 
   const scroll = (dir: 'left' | 'right') => {
     if (!scrollRef.current) return;
-    const amount = cardWidth * 4 + 12 * 4;
-    scrollRef.current.scrollBy({
-      left: dir === 'right' ? amount : -amount,
-      behavior: 'smooth',
-    });
+    scrollRef.current.scrollBy({ left: dir === 'right' ? 640 : -640, behavior: 'smooth' });
   };
 
   return (
-    <div style={{ marginBottom: 28 }}>
-      {/* Section header */}
-      <div
-        style={{
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'space-between',
-          marginBottom: 14,
-          padding: '0 2px',
-        }}
-      >
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <div
-            style={{
-              width: 3,
-              height: 16,
-              background: '#e60012',
-              borderRadius: 2,
-              flexShrink: 0,
-            }}
-          />
-          <h2
-            style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: '#f0f0f0',
-              letterSpacing: '-0.01em',
-            }}
-          >
-            {title}
-          </h2>
-        </div>
+    <div className="module_container module_container_light_on">
+      <div className="module_content">
+        <div className="feed_container_2OIca">
+          <div className="hscroll_wrapper_3CJzY">
+            <h3 className="hscroll_title_30U6K">
+              <div className="main_title_wrap_box_glhYQ">
+                <p className="main_title_wrap_2TE0C">
+                  <span className="main_title__lmLp main_title_hover_2QYJo">{title}</span>
+                </p>
+              </div>
+              {keyword && (
+                <div className="keywords_wrap_2IdTv">
+                  <a className="keywords_1G-iy" href="#">{keyword}</a>
+                </div>
+              )}
+            </h3>
 
-        {/* Arrow buttons */}
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button
-            onClick={() => scroll('left')}
-            disabled={!canScrollLeft}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: canScrollLeft ? '#222' : '#161616',
-              border: '1px solid',
-              borderColor: canScrollLeft ? '#333' : '#202020',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: canScrollLeft ? 'pointer' : 'not-allowed',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              if (canScrollLeft)
-                (e.currentTarget as HTMLButtonElement).style.background = '#e60012';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = canScrollLeft
-                ? '#222'
-                : '#161616';
-            }}
-          >
-            <ChevronLeft size={14} color={canScrollLeft ? '#ccc' : '#444'} />
-          </button>
-          <button
-            onClick={() => scroll('right')}
-            disabled={!canScrollRight}
-            style={{
-              width: 28,
-              height: 28,
-              borderRadius: '50%',
-              background: canScrollRight ? '#222' : '#161616',
-              border: '1px solid',
-              borderColor: canScrollRight ? '#333' : '#202020',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              cursor: canScrollRight ? 'pointer' : 'not-allowed',
-              transition: 'all 0.15s',
-            }}
-            onMouseEnter={(e) => {
-              if (canScrollRight)
-                (e.currentTarget as HTMLButtonElement).style.background = '#e60012';
-            }}
-            onMouseLeave={(e) => {
-              (e.currentTarget as HTMLButtonElement).style.background = canScrollRight
-                ? '#222'
-                : '#161616';
-            }}
-          >
-            <ChevronRight size={14} color={canScrollRight ? '#ccc' : '#444'} />
-          </button>
-        </div>
-      </div>
+            <div style={{ position: 'relative' }}>
+              <div
+                ref={scrollRef}
+                className="hscroll_content_fdYOj"
+                onScroll={updateScrollState}
+                style={{ overflowX: 'auto', scrollbarWidth: 'none' }}
+              >
+                <div className="card_container_1U0e6" style={{ paddingBottom: 4, flexDirection: 'row' }}>
+                  {cards.map((card) => (
+                    <div key={card.id} className="g-col" style={{ width: 148, minWidth: 148, flexShrink: 0 }}>
+                      <VideoCard card={card} />
+                    </div>
+                  ))}
+                </div>
+              </div>
 
-      {/* Scrollable row */}
-      <div style={{ position: 'relative' }}>
-        <div
-          ref={scrollRef}
-          onScroll={updateScrollState}
-          style={{
-            display: 'flex',
-            gap: 12,
-            overflowX: 'auto',
-            scrollbarWidth: 'none',
-            msOverflowStyle: 'none',
-            paddingBottom: 2,
-          }}
-        >
-          {cards.map((card) => (
-            <div
-              key={card.id}
-              style={{
-                width: cardWidth,
-                minWidth: cardWidth,
-                flexShrink: 0,
-              }}
-            >
-              <VideoCard card={card} />
+              {/* Scroll arrows */}
+              {canScrollLeft && (
+                <button
+                  onClick={() => scroll('left')}
+                  style={{
+                    position: 'absolute', left: -14, top: '38%', transform: 'translateY(-50%)',
+                    width: 28, height: 60, background: '#1e1e1e', border: '1px solid #2a2a2a',
+                    borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 5, color: '#aaa', fontSize: 18,
+                  }}
+                >‹</button>
+              )}
+              {canScrollRight && (
+                <button
+                  onClick={() => scroll('right')}
+                  style={{
+                    position: 'absolute', right: -14, top: '38%', transform: 'translateY(-50%)',
+                    width: 28, height: 60, background: '#1e1e1e', border: '1px solid #2a2a2a',
+                    borderRadius: 4, cursor: 'pointer', display: 'flex', alignItems: 'center',
+                    justifyContent: 'center', zIndex: 5, color: '#aaa', fontSize: 18,
+                  }}
+                >›</button>
+              )}
             </div>
-          ))}
+          </div>
         </div>
-
-        {/* Left fade */}
-        {canScrollLeft && (
-          <div
-            style={{
-              position: 'absolute',
-              left: 0,
-              top: 0,
-              bottom: 0,
-              width: 40,
-              background:
-                'linear-gradient(to right, rgba(20,20,20,0.95) 0%, transparent 100%)',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
-
-        {/* Right fade */}
-        {canScrollRight && (
-          <div
-            style={{
-              position: 'absolute',
-              right: 0,
-              top: 0,
-              bottom: 0,
-              width: 40,
-              background:
-                'linear-gradient(to left, rgba(20,20,20,0.95) 0%, transparent 100%)',
-              pointerEvents: 'none',
-            }}
-          />
-        )}
       </div>
     </div>
   );
