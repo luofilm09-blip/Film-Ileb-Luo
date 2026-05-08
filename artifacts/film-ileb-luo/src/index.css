@@ -772,6 +772,11 @@ html, body {
   white-space: nowrap;
 }
 
+/* ======= PLAY PAGE RESPONSIVE TOGGLE ======= */
+/* Desktop: show desktop layout, hide mobile */
+.play-mobile-layout { display: none; }
+.play-desktop-layout { display: block; }
+
 /* ======= MOBILE RESPONSIVE ======= */
 @media (max-width: 768px) {
   /* Hide desktop sidebar */
@@ -840,11 +845,25 @@ html, body {
     font-size: 12px;
   }
 
-  /* Section rows — smaller cards */
+  /* Section rows — convert horizontal scroll to 3-per-row grid on mobile */
   .module_container { padding: 10px 8px 0; }
   .main_title__lmLp { font-size: 14px; }
 
-  .g-col { width: 110px; min-width: 110px; }
+  .hscroll_content_fdYOj {
+    overflow: visible !important;
+  }
+  .card_container_1U0e6 {
+    display: grid !important;
+    grid-template-columns: repeat(3, 1fr) !important;
+    gap: 8px 6px !important;
+    flex-direction: unset !important;
+    flex-wrap: unset !important;
+  }
+  .g-col {
+    width: auto !important;
+    min-width: unset !important;
+    flex-shrink: unset !important;
+  }
 
   /* Category page grid — 3 per row on mobile */
   .mobile-grid-3 {
@@ -857,11 +876,18 @@ html, body {
   .pack_subtitle_1HHha { font-size: 10px; }
   .lb_texts_23IEZ { font-size: 9px; }
   .pack_mark_1hLkl { font-size: 8px; padding: 1px 4px; }
+
+  /* Play page: show mobile layout, hide desktop */
+  .play-mobile-layout { display: block; }
+  .play-desktop-layout { display: none; }
+
+  /* Show mobile site name in header */
+  .mobile-site-name { display: flex !important; }
 }
 
 @media (max-width: 480px) {
-  .search_search_box_wrap { width: 110px; }
-  .search_search_box_wrap:focus-within { width: 140px; }
+  .search_search_box_wrap { width: 100px; }
+  .search_search_box_wrap:focus-within { width: 130px; }
   .crmvip_vip_pop_content { display: none; }
   .filter_filter_box { display: none; }
   .category-cards-wrap { padding: 10px 8px 80px !important; }

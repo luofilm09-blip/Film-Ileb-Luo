@@ -82,7 +82,15 @@ export default function Header() {
   return (
     <>
       <div className="topheader_top_header_box">
-        <div className="topheader_left_box" />
+        <div className="topheader_left_box">
+          {/* Site name — mobile only */}
+          <div className="mobile-site-name" style={{ display: 'none', alignItems: 'center', paddingLeft: 4 }}>
+            <span style={{ fontFamily: '"Arial Black", Arial, sans-serif', fontSize: 15, fontWeight: 900, letterSpacing: 0.5 }}>
+              <span style={{ color: '#e50914' }}>FILM</span>
+              <span style={{ color: '#fff' }}> ILEB LUO</span>
+            </span>
+          </div>
+        </div>
         <div className="topheader_right_box">
 
           {/* Search */}
