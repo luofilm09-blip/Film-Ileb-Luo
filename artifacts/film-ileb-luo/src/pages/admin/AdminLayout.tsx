@@ -6,6 +6,17 @@ import {
   SubscriptionIcon, WalletIcon, SettingsIcon, SEOIcon, BackIcon, LogoutIcon,
 } from '../../components/Icons';
 
+function CarouselIcon({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="5" width="20" height="14" rx="2"/>
+      <path d="M8 12l4-4 4 4"/>
+      <circle cx="5" cy="12" r="1" fill={color}/>
+      <circle cx="19" cy="12" r="1" fill={color}/>
+    </svg>
+  );
+}
+
 const navSections = [
   {
     title: 'OVERVIEW',
@@ -14,6 +25,7 @@ const navSections = [
   {
     title: 'CONTENT',
     items: [
+      { id: 'carousel', label: 'CAROUSEL', Icon: CarouselIcon, path: '/admin/carousel' },
       { id: 'movies', label: 'MOVIES', Icon: MovieIcon, path: '/admin/movies' },
       { id: 'series', label: 'TV SERIES', Icon: SeriesIcon, path: '/admin/series' },
       { id: 'episodes', label: 'EPISODES', Icon: EpisodeIcon, path: '/admin/episodes' },

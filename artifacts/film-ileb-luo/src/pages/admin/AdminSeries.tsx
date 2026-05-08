@@ -6,7 +6,18 @@ import { PlusIcon, EditIcon, TrashIcon, UploadIcon } from '../../components/Icon
 const CATEGORIES = ['drama','anime','variety','short','kids','vip','documentary','sports','culture'];
 const BADGES = ['EXCLUSIVE','HOT CHART TOP','VIP','NEW ARRIVAL','PREMIERE','UPDATED NEW','FREE NOW'];
 const STATUS = ['ongoing','completed','upcoming'];
-const empty = { title:'',description:'',category:'drama',thumbnail:'',year:'',totalEpisodes:'',rating:'',tags:'',badge:'EXCLUSIVE',isFeatured:false,status:'ongoing' };
+const HOME_SECTIONS = [
+  { value: '', label: '— NONE —' },
+  { value: 'keep-watching', label: 'KEEP WATCHING' },
+  { value: 'trending', label: 'TRENDING NOW' },
+  { value: 'new-arrivals', label: 'NEW ARRIVALS' },
+  { value: 'top-drama', label: 'TOP DRAMAS' },
+  { value: 'top-anime', label: 'TOP ANIME' },
+  { value: 'top-movies', label: 'TOP MOVIES' },
+  { value: 'vip-picks', label: 'VIP PICKS' },
+  { value: 'featured', label: 'FEATURED' },
+];
+const empty = { title:'',description:'',category:'drama',thumbnail:'',year:'',totalEpisodes:'',rating:'',tags:'',badge:'EXCLUSIVE',isFeatured:false,status:'ongoing',homeSection:'' };
 
 export default function AdminSeries() {
   const [series, setSeries] = useState<ContentDoc[]>([]);
@@ -31,7 +42,7 @@ export default function AdminSeries() {
     if (!form.title) return;
     setSaving(true);
     try {
-      const data = { title:form.title, description:form.description, category:form.category, thumbnail:form.thumbnail, videoUrl:'', year:form.year, duration:'', rating:form.rating, tags:form.tags, badge:form.badge, isFeatured:form.isFeatured, status:form.status, totalEpisodes:form.totalEpisodes, language:'', isActive:true };
+      const data = { title:form.title, description:form.description, category:form.category, thumbnail:form.thumbnail, videoUrl:'', year:form.year, duration:'', rating:form.rating, tags:form.tags, badge:form.badge, isFeatured:form.isFeatured, status:form.status, totalEpisodes:form.totalEpisodes, language:'', isActive:true, homeSection:form.homeSection };
       if (editId) await updateContent(editId, { ...data, type:'series' });
       else await addContent({ ...data, type:'series' });
       setForm(empty); setEditId(null); setShowForm(false);
@@ -39,7 +50,7 @@ export default function AdminSeries() {
   };
 
   const edit = (s: ContentDoc) => {
-    setForm({ title:s.title,description:s.description,category:s.category,thumbnail:s.thumbnail,year:s.year,totalEpisodes:s.totalEpisodes||'',rating:s.rating,tags:s.tags,badge:s.badge,isFeatured:s.isFeatured,status:s.status||'ongoing' });
+    setForm({ title:s.title,description:s.description,category:s.category,thumbnail:s.thumbnail,year:s.year,totalEpisodes:s.totalEpisodes||'',rating:s.rating,tags:s.tags,badge:s.badge,isFeatured:s.isFeatured,status:s.status||'ongoing',homeSection:s.homeSection||'' });
     setEditId(s.id!); setShowForm(true);
   };
   const del = async (id: string) => { if (confirm('DELETE THIS SERIES?')) await deleteContent(id); };
@@ -80,7 +91,13 @@ export default function AdminSeries() {
               </div>
               {thumbPct > 0 && <ProgressBar pct={thumbPct} />}
             </div>
-            <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>HOME PAGE SECTION</label>
+              <select style={inputStyle} value={form.homeSection} onChange={e => set('homeSection', e.target.value)}>
+                {HOME_SECTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, alignSelf: 'flex-end', padding: '10px 0' }}>
               <input type="checkbox" id="feat" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} />
               <label htmlFor="feat" style={{ color: '#888', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>FEATURE ON HOMEPAGE BANNER</label>
             </div>

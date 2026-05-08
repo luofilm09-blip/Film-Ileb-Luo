@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useParams, Link } from 'wouter';
 import { doc, getDoc, collection, query, where, orderBy, getDocs, updateDoc, increment } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import { ContentDoc, EpisodeDoc } from '../lib/db';
+import { ContentDoc, EpisodeDoc, addToHistory } from '../lib/db';
 import { useApp } from '../context/AppContext';
 import MuxPlayer from '@mux/mux-player-react';
 
@@ -26,6 +26,8 @@ export default function PlayPage() {
           setContent(c);
           // increment view count
           updateDoc(doc(db, 'content', id), { views: increment(1) }).catch(() => {});
+          // add to watch history
+          addToHistory({ contentId: c.id!, title: c.title, thumbnail: c.thumbnail, watchedAt: Date.now() });
           if (c.type === 'series') {
             const epSnap = await getDocs(query(collection(db, 'episodes'), where('seriesId', '==', id), orderBy('episodeNumber', 'asc')));
             const eps = epSnap.docs.map(d => ({ id: d.id, ...d.data() } as EpisodeDoc));

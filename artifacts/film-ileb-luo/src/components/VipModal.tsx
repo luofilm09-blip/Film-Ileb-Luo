@@ -16,14 +16,21 @@ export default function VipModal() {
 
   if (!vipModalOpen) return null;
 
+  const calcEnd = (plan: PlanDoc): Date => {
+    const end = new Date();
+    if (plan.durationUnit === 'day') end.setDate(end.getDate() + plan.duration);
+    else if (plan.durationUnit === 'week') end.setDate(end.getDate() + plan.duration * 7);
+    else if (plan.durationUnit === 'month') end.setMonth(end.getMonth() + plan.duration);
+    else end.setFullYear(end.getFullYear() + plan.duration);
+    return end;
+  };
+
   const handleSubscribe = async (plan: PlanDoc) => {
     if (!isLoggedIn || !user) { closeVip(); openLogin('login'); return; }
     setLoading(plan.id!);
     try {
       const start = new Date();
-      const end = new Date(start);
-      if (plan.durationUnit === 'month') end.setMonth(end.getMonth() + plan.duration);
-      else end.setFullYear(end.getFullYear() + plan.duration);
+      const end = calcEnd(plan);
 
       await setUser(user.uid, {
         isVip: true,
@@ -73,17 +80,24 @@ export default function VipModal() {
   );
 
   const defaultPlans: PlanDoc[] = plans.length ? plans : [
-    { id: 'monthly', name: 'MONTHLY', price: 9.99, duration: 1, durationUnit: 'month', features: 'HD STREAMING, NO ADS, EXCLUSIVE CONTENT, 1 DEVICE', isActive: true, color: '#4a9eff' },
-    { id: 'quarterly', name: 'QUARTERLY', price: 24.99, duration: 3, durationUnit: 'month', features: '4K ULTRA HD, NO ADS, EXCLUSIVE + PREMIERE, 2 DEVICES, DOWNLOAD OFFLINE', isActive: true, color: '#e50914' },
-    { id: 'yearly', name: 'YEARLY', price: 79.99, duration: 1, durationUnit: 'year', features: '4K ULTRA HD, NO ADS, ALL CONTENT, 4 DEVICES, DOWNLOAD OFFLINE, EARLY ACCESS', isActive: true, color: '#f5a623' },
+    { id: 'daily', name: 'DAILY', price: 2000, duration: 1, durationUnit: 'day', features: 'HD STREAMING, NO ADS, 1 DEVICE', isActive: true, color: '#22c55e' },
+    { id: 'weekly', name: 'WEEKLY', price: 4000, duration: 1, durationUnit: 'week', features: 'HD STREAMING, NO ADS, 1 DEVICE', isActive: true, color: '#4a9eff' },
+    { id: 'monthly', name: 'MONTHLY', price: 12000, duration: 1, durationUnit: 'month', features: 'HD STREAMING, NO ADS, EXCLUSIVE CONTENT, 1 DEVICE', isActive: true, color: '#e50914' },
+    { id: 'yearly', name: 'YEARLY', price: 90000, duration: 1, durationUnit: 'year', features: '4K ULTRA HD, NO ADS, ALL CONTENT, 4 DEVICES, DOWNLOAD OFFLINE, EARLY ACCESS', isActive: true, color: '#f5a623' },
   ];
 
   const activePlans = defaultPlans.filter(p => p.isActive);
 
+  const durationLabel = (plan: PlanDoc) => {
+    const unit = plan.durationUnit;
+    const s = plan.duration > 1 ? 'S' : '';
+    return `${plan.duration} ${unit.toUpperCase()}${s}`;
+  };
+
   return (
     <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
       <div onClick={closeVip} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.82)', backdropFilter: 'blur(6px)' }} />
-      <div style={{ position: 'relative', background: 'linear-gradient(145deg,#1a1a1a,#111)', borderRadius: 20, width: 800, maxWidth: '97vw', padding: '36px 32px 32px', boxShadow: '0 32px 100px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)' }}>
+      <div style={{ position: 'relative', background: 'linear-gradient(145deg,#1a1a1a,#111)', borderRadius: 20, width: Math.min(900, activePlans.length * 220 + 96), maxWidth: '97vw', padding: '36px 32px 32px', boxShadow: '0 32px 100px rgba(0,0,0,0.9)', border: '1px solid rgba(255,255,255,0.08)', maxHeight: '95vh', overflowY: 'auto' }}>
         <button onClick={closeVip} style={{ position: 'absolute', top: 16, right: 18, background: 'none', border: 'none', color: '#666', cursor: 'pointer', display: 'flex' }}>
           <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M18 6L6 18M6 6l12 12"/></svg>
         </button>
@@ -97,10 +111,10 @@ export default function VipModal() {
           <p style={{ color: '#666', fontFamily: 'Arial, sans-serif', fontSize: 12, letterSpacing: 1, margin: 0 }}>4K STREAMING · NO ADS · EXCLUSIVE CONTENT</p>
         </div>
 
-        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${activePlans.length}, 1fr)`, gap: 16 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: `repeat(${Math.min(activePlans.length, 4)}, 1fr)`, gap: 14 }}>
           {activePlans.map((plan, i) => {
-            const isPopular = i === 1;
-            const isBest = i === activePlans.length - 1 && activePlans.length > 2;
+            const isPopular = activePlans.length >= 3 && i === Math.floor(activePlans.length / 2);
+            const isBest = activePlans.length > 2 && i === activePlans.length - 1;
             const badge = isPopular ? 'POPULAR' : isBest ? 'BEST VALUE' : null;
             return (
               <div key={plan.id} style={{ position: 'relative', background: isPopular ? 'linear-gradient(145deg,#2a0a0a,#1a0505)' : '#1e1e1e', border: `1px solid ${isPopular ? '#e50914' : 'rgba(255,255,255,0.08)'}`, borderRadius: 16, padding: '24px 20px', display: 'flex', flexDirection: 'column', gap: 16, transition: 'transform 0.2s', cursor: 'pointer' }}
@@ -113,9 +127,10 @@ export default function VipModal() {
                 )}
                 <div>
                   <div style={{ color: plan.color, fontFamily: 'Arial, sans-serif', fontWeight: 700, fontSize: 11, letterSpacing: 2, marginBottom: 10 }}>{plan.name}</div>
-                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4 }}>
-                    <span style={{ color: '#fff', fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 32, fontWeight: 900 }}>${plan.price}</span>
-                    <span style={{ color: '#555', fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: 1 }}>/ {plan.duration} {plan.durationUnit}{plan.duration > 1 ? 'S' : ''}</span>
+                  <div style={{ display: 'flex', alignItems: 'baseline', gap: 4, flexWrap: 'wrap' }}>
+                    <span style={{ color: '#aaa', fontSize: 12, fontFamily: 'Arial, sans-serif', fontWeight: 700 }}>UGX</span>
+                    <span style={{ color: '#fff', fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 28, fontWeight: 900 }}>{plan.price.toLocaleString()}</span>
+                    <span style={{ color: '#555', fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: 1 }}>/ {durationLabel(plan)}</span>
                   </div>
                 </div>
                 <ul style={{ listStyle: 'none', margin: 0, padding: 0, display: 'flex', flexDirection: 'column', gap: 8, flex: 1 }}>
@@ -126,7 +141,7 @@ export default function VipModal() {
                     </li>
                   ))}
                 </ul>
-                <button onClick={() => handleSubscribe(plan)} disabled={!!loading} style={{ width: '100%', padding: '12px', background: isPopular ? 'linear-gradient(135deg,#e50914,#c0000a)' : isBest ? 'linear-gradient(135deg,#f5a623,#e08a00)' : `rgba(${plan.color === '#4a9eff' ? '74,158,255' : '255,255,255'},0.1)`, border: isPopular || isBest ? 'none' : `1px solid ${plan.color}44`, borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, cursor: loading ? 'not-allowed' : 'pointer' }}>
+                <button onClick={() => handleSubscribe(plan)} disabled={!!loading} style={{ width: '100%', padding: '12px', background: isPopular ? 'linear-gradient(135deg,#e50914,#c0000a)' : isBest ? 'linear-gradient(135deg,#f5a623,#e08a00)' : `rgba(${plan.color === '#4a9eff' ? '74,158,255' : plan.color === '#22c55e' ? '34,197,94' : '255,255,255'},0.1)`, border: isPopular || isBest ? 'none' : `1px solid ${plan.color}44`, borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: 1.5, cursor: loading ? 'not-allowed' : 'pointer' }}>
                   {loading === plan.id ? 'PROCESSING...' : 'SUBSCRIBE NOW'}
                 </button>
               </div>
@@ -134,7 +149,7 @@ export default function VipModal() {
           })}
         </div>
         <p style={{ textAlign: 'center', marginTop: 20, color: '#333', fontFamily: 'Arial, sans-serif', fontSize: 10, letterSpacing: 0.8 }}>
-          CANCEL ANYTIME · AUTO-RENEWAL · SECURE PAYMENT · ALL PRICES IN USD
+          CANCEL ANYTIME · AUTO-RENEWAL · SECURE PAYMENT · ALL PRICES IN UGX
         </p>
       </div>
     </div>

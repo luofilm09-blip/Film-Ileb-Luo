@@ -5,7 +5,18 @@ import { PlusIcon, EditIcon, TrashIcon, UploadIcon } from '../../components/Icon
 
 const CATEGORIES = ['drama','anime','movies','variety','short','kids','vip','documentary','sports','culture'];
 const BADGES = ['FREE NOW','EXCLUSIVE','HOT CHART TOP','VIP','NEW ARRIVAL','PREMIERE','UPDATED NEW'];
-const empty = { title:'',description:'',category:'drama',thumbnail:'',videoUrl:'',year:'',duration:'',rating:'',tags:'',badge:'FREE NOW',isFeatured:false };
+const HOME_SECTIONS = [
+  { value: '', label: '— NONE —' },
+  { value: 'keep-watching', label: 'KEEP WATCHING' },
+  { value: 'trending', label: 'TRENDING NOW' },
+  { value: 'new-arrivals', label: 'NEW ARRIVALS' },
+  { value: 'top-drama', label: 'TOP DRAMAS' },
+  { value: 'top-anime', label: 'TOP ANIME' },
+  { value: 'top-movies', label: 'TOP MOVIES' },
+  { value: 'vip-picks', label: 'VIP PICKS' },
+  { value: 'featured', label: 'FEATURED' },
+];
+const empty = { title:'',description:'',category:'drama',thumbnail:'',videoUrl:'',year:'',duration:'',rating:'',tags:'',badge:'FREE NOW',isFeatured:false,homeSection:'' };
 
 export default function AdminMovies() {
   const [movies, setMovies] = useState<ContentDoc[]>([]);
@@ -37,12 +48,12 @@ export default function AdminMovies() {
     setSaving(true);
     try {
       if (editId) { await updateContent(editId, { ...form, type: 'movie' }); }
-      else { await addContent({ ...form, type: 'movie', language: '' }); }
+      else { await addContent({ ...form, type: 'movie', language: '', status: '', totalEpisodes: '', isActive: true }); }
       setForm(empty); setEditId(null); setShowForm(false);
     } finally { setSaving(false); }
   };
 
-  const edit = (m: ContentDoc) => { setForm({ title:m.title,description:m.description,category:m.category,thumbnail:m.thumbnail,videoUrl:m.videoUrl,year:m.year,duration:m.duration,rating:m.rating,tags:m.tags,badge:m.badge,isFeatured:m.isFeatured }); setEditId(m.id!); setShowForm(true); };
+  const edit = (m: ContentDoc) => { setForm({ title:m.title,description:m.description,category:m.category,thumbnail:m.thumbnail,videoUrl:m.videoUrl,year:m.year,duration:m.duration,rating:m.rating,tags:m.tags,badge:m.badge,isFeatured:m.isFeatured,homeSection:m.homeSection||'' }); setEditId(m.id!); setShowForm(true); };
   const del = async (id: string) => { if (confirm('DELETE THIS MOVIE?')) await deleteContent(id); };
 
   const filtered = movies.filter(m => m.title.toLowerCase().includes(search.toLowerCase()));
@@ -91,7 +102,13 @@ export default function AdminMovies() {
               {vidPct > 0 && <ProgressBar pct={vidPct} />}
             </div>
 
-            <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 10 }}>
+            <div>
+              <label style={labelStyle}>HOME PAGE SECTION</label>
+              <select style={inputStyle} value={form.homeSection} onChange={e => set('homeSection', e.target.value)}>
+                {HOME_SECTIONS.map(s => <option key={s.value} value={s.value}>{s.label}</option>)}
+              </select>
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, alignSelf: 'flex-end', padding: '10px 0' }}>
               <input type="checkbox" id="feat" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} />
               <label htmlFor="feat" style={{ color: '#888', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>FEATURE ON HOMEPAGE BANNER</label>
             </div>

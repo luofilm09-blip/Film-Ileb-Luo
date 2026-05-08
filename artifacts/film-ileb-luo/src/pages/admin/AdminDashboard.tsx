@@ -169,7 +169,7 @@ export default function AdminDashboard() {
     { label: 'TOTAL USERS', value: stats.users, Icon: UsersIcon, color: '#4a9eff', sub: 'REGISTERED ACCOUNTS' },
     { label: 'VIP MEMBERS', value: stats.vipUsers, Icon: CrownIcon, color: '#f5a623', sub: 'ACTIVE SUBSCRIPTIONS' },
     { label: 'TOTAL CONTENT', value: stats.content, Icon: MovieIcon, color: '#22c55e', sub: 'MOVIES / SERIES / LIVE' },
-    { label: 'TOTAL REVENUE', value: `$${stats.revenue.toFixed(2)}`, Icon: DollarIcon, color: '#e50914', sub: 'FROM SUBSCRIPTIONS' },
+    { label: 'TOTAL REVENUE', value: `UGX ${stats.revenue.toLocaleString()}`, Icon: DollarIcon, color: '#e50914', sub: 'FROM SUBSCRIPTIONS' },
   ];
 
   return (

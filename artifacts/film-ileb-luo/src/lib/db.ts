@@ -39,6 +39,7 @@ export type ContentDoc = {
   language: string;
   isActive: boolean;
   views: number;
+  homeSection: string;
   createdAt: Timestamp;
 };
 
@@ -60,7 +61,7 @@ export type PlanDoc = {
   name: string;
   price: number;
   duration: number;
-  durationUnit: 'month' | 'year';
+  durationUnit: 'day' | 'week' | 'month' | 'year';
   features: string;
   isActive: boolean;
   color: string;
@@ -118,6 +119,24 @@ export type AdminAuthDoc = {
   email: string;
 };
 
+export type CarouselDoc = {
+  id?: string;
+  image: string;
+  title: string;
+  description: string;
+  contentId: string;
+  isActive: boolean;
+  order: number;
+  createdAt: Timestamp;
+};
+
+export type WatchHistoryDoc = {
+  contentId: string;
+  title: string;
+  thumbnail: string;
+  watchedAt: number;
+};
+
 // ── User operations ─────────────────────────────────────────────────────────
 
 export async function getUser(uid: string): Promise<UserDoc | null> {
@@ -173,6 +192,24 @@ export async function getContent(type?: ContentDoc['type']): Promise<ContentDoc[
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc));
 }
 
+export async function getAllContent(): Promise<ContentDoc[]> {
+  const snap = await getDocs(query(collection(db, 'content'), orderBy('createdAt', 'desc')));
+  return snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc));
+}
+
+export async function getContentBySection(section: string): Promise<ContentDoc[]> {
+  try {
+    const snap = await getDocs(query(
+      collection(db, 'content'),
+      where('homeSection', '==', section),
+      orderBy('createdAt', 'desc')
+    ));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc));
+  } catch {
+    return [];
+  }
+}
+
 export async function addContent(data: Omit<ContentDoc, 'id' | 'createdAt' | 'views'>): Promise<string> {
   const ref = await addDoc(collection(db, 'content'), { ...data, views: 0, createdAt: serverTimestamp() });
   return ref.id;
@@ -187,8 +224,12 @@ export async function deleteContent(id: string) {
 }
 
 export function subscribeContent(type: ContentDoc['type'], cb: (data: ContentDoc[]) => void) {
-  const q = query(collection(db, 'content'), where('type', '==', type), orderBy('createdAt', 'desc'));
-  return onSnapshot(q, snap => cb(snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc))));
+  const q = query(collection(db, 'content'), where('type', '==', type));
+  return onSnapshot(q, snap => {
+    const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc));
+    data.sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
+    cb(data);
+  });
 }
 
 // ── Episode operations ──────────────────────────────────────────────────────
@@ -216,9 +257,10 @@ export async function deleteEpisode(id: string) {
 // ── Subscription plan operations ────────────────────────────────────────────
 
 const DEFAULT_PLANS: Omit<PlanDoc, 'id'>[] = [
-  { name: 'MONTHLY', price: 9.99, duration: 1, durationUnit: 'month', features: 'HD STREAMING, NO ADS, EXCLUSIVE CONTENT, 1 DEVICE', isActive: true, color: '#4a9eff' },
-  { name: 'QUARTERLY', price: 24.99, duration: 3, durationUnit: 'month', features: '4K ULTRA HD, NO ADS, EXCLUSIVE + PREMIERE, 2 DEVICES, DOWNLOAD OFFLINE', isActive: true, color: '#e50914' },
-  { name: 'YEARLY', price: 79.99, duration: 1, durationUnit: 'year', features: '4K ULTRA HD, NO ADS, ALL CONTENT, 4 DEVICES, DOWNLOAD OFFLINE, EARLY ACCESS', isActive: true, color: '#f5a623' },
+  { name: 'WEEKLY', price: 4000, duration: 1, durationUnit: 'week', features: 'HD STREAMING, NO ADS, 1 DEVICE', isActive: true, color: '#22c55e' },
+  { name: 'MONTHLY', price: 12000, duration: 1, durationUnit: 'month', features: 'HD STREAMING, NO ADS, EXCLUSIVE CONTENT, 1 DEVICE', isActive: true, color: '#4a9eff' },
+  { name: 'QUARTERLY', price: 30000, duration: 3, durationUnit: 'month', features: '4K ULTRA HD, NO ADS, EXCLUSIVE + PREMIERE, 2 DEVICES, DOWNLOAD OFFLINE', isActive: true, color: '#e50914' },
+  { name: 'YEARLY', price: 90000, duration: 1, durationUnit: 'year', features: '4K ULTRA HD, NO ADS, ALL CONTENT, 4 DEVICES, DOWNLOAD OFFLINE, EARLY ACCESS', isActive: true, color: '#f5a623' },
 ];
 
 export async function getPlans(): Promise<PlanDoc[]> {
@@ -233,8 +275,17 @@ export async function getPlans(): Promise<PlanDoc[]> {
   return snap.docs.map(d => ({ id: d.id, ...d.data() } as PlanDoc));
 }
 
+export async function addPlan(data: Omit<PlanDoc, 'id'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'plans'), data);
+  return ref.id;
+}
+
 export async function updatePlan(id: string, data: Partial<PlanDoc>) {
   await updateDoc(doc(db, 'plans', id), data);
+}
+
+export async function deletePlan(id: string) {
+  await deleteDoc(doc(db, 'plans', id));
 }
 
 // ── Subscription records ────────────────────────────────────────────────────
@@ -259,6 +310,39 @@ export async function getTransactions(): Promise<TransactionDoc[]> {
 export async function addTransaction(data: Omit<TransactionDoc, 'id'>): Promise<string> {
   const ref = await addDoc(collection(db, 'transactions'), data);
   return ref.id;
+}
+
+// ── Carousel operations ──────────────────────────────────────────────────────
+
+export async function getCarousel(): Promise<CarouselDoc[]> {
+  try {
+    const snap = await getDocs(query(collection(db, 'carousel'), where('isActive', '==', true), orderBy('order', 'asc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as CarouselDoc));
+  } catch {
+    return [];
+  }
+}
+
+export async function getAllCarousel(): Promise<CarouselDoc[]> {
+  try {
+    const snap = await getDocs(query(collection(db, 'carousel'), orderBy('order', 'asc')));
+    return snap.docs.map(d => ({ id: d.id, ...d.data() } as CarouselDoc));
+  } catch {
+    return [];
+  }
+}
+
+export async function addCarousel(data: Omit<CarouselDoc, 'id' | 'createdAt'>): Promise<string> {
+  const ref = await addDoc(collection(db, 'carousel'), { ...data, createdAt: serverTimestamp() });
+  return ref.id;
+}
+
+export async function updateCarousel(id: string, data: Partial<CarouselDoc>) {
+  await updateDoc(doc(db, 'carousel', id), data);
+}
+
+export async function deleteCarousel(id: string) {
+  await deleteDoc(doc(db, 'carousel', id));
 }
 
 // ── Site settings ───────────────────────────────────────────────────────────
@@ -297,4 +381,28 @@ export async function getSeoSettings(): Promise<SeoDoc> {
 
 export async function saveSeoSettings(data: SeoDoc) {
   await setDoc(doc(db, 'settings', 'seo'), data);
+}
+
+// ── Watch history (localStorage) ─────────────────────────────────────────────
+
+const HISTORY_KEY = 'film_ileb_luo_history';
+
+export function addToHistory(item: WatchHistoryDoc) {
+  try {
+    const existing = getHistory();
+    const filtered = existing.filter(h => h.contentId !== item.contentId);
+    const updated = [{ ...item, watchedAt: Date.now() }, ...filtered].slice(0, 50);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
+  } catch {}
+}
+
+export function getHistory(): WatchHistoryDoc[] {
+  try {
+    const raw = localStorage.getItem(HISTORY_KEY);
+    return raw ? JSON.parse(raw) : [];
+  } catch { return []; }
+}
+
+export function clearHistory() {
+  try { localStorage.removeItem(HISTORY_KEY); } catch {}
 }

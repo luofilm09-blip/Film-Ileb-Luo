@@ -24,6 +24,7 @@ import AdminSubscriptions from './pages/admin/AdminSubscriptions';
 import AdminWallet from './pages/admin/AdminWallet';
 import AdminSettings from './pages/admin/AdminSettings';
 import AdminSEO from './pages/admin/AdminSEO';
+import AdminCarousel from './pages/admin/AdminCarousel';
 
 const queryClient = new QueryClient();
 
@@ -223,6 +224,7 @@ function AdminGate() {
         <Route path="/admin/users" component={AdminUsers} />
         <Route path="/admin/subscriptions" component={AdminSubscriptions} />
         <Route path="/admin/wallet" component={AdminWallet} />
+        <Route path="/admin/carousel" component={AdminCarousel} />
         <Route path="/admin/settings" component={AdminSettings} />
         <Route path="/admin/seo" component={AdminSEO} />
         <Route>{() => <Redirect to="/admin" />}</Route>
