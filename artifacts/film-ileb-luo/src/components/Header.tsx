@@ -95,21 +95,35 @@ export default function Header() {
 
           {/* Search */}
           <div ref={searchRef} className="search_search_box" style={{ position: 'relative' }}>
-            <div className="search_search_box_wrap">
-              <div className="search_search_input_box">
-                <svg className="search_search_icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
-                </svg>
-                <div className="search_search_input_content">
-                  <input
-                    className="search_search_input"
-                    type="text"
-                    placeholder="SEARCH FILM ILEB LUO"
-                    value={searchValue}
-                    onChange={(e) => setSearchValue(e.target.value)}
-                    onFocus={() => { if (searchResults.length > 0) setShowSearchDrop(true); }}
-                    style={{ fontFamily: 'Arial, sans-serif', textTransform: 'uppercase' }}
-                  />
+            {/* Mobile: tap to go to /search page */}
+            <div className="mobile-search-tap" style={{ display: 'none' }} onClick={() => navigate('/search')}>
+              <div className="search_search_box_wrap" style={{ cursor: 'pointer' }}>
+                <div className="search_search_input_box">
+                  <svg className="search_search_icon" width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <span style={{ fontSize: 11, color: '#555', fontFamily: 'Arial, sans-serif', letterSpacing: 0.3 }}>SEARCH...</span>
+                </div>
+              </div>
+            </div>
+            {/* Desktop: inline search with dropdown */}
+            <div className="desktop-search-box">
+              <div className="search_search_box_wrap">
+                <div className="search_search_input_box">
+                  <svg className="search_search_icon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/>
+                  </svg>
+                  <div className="search_search_input_content">
+                    <input
+                      className="search_search_input"
+                      type="text"
+                      placeholder="SEARCH FILM ILEB LUO"
+                      value={searchValue}
+                      onChange={(e) => setSearchValue(e.target.value)}
+                      onFocus={() => { if (searchResults.length > 0) setShowSearchDrop(true); }}
+                      style={{ fontFamily: 'Arial, sans-serif', textTransform: 'uppercase' }}
+                    />
+                  </div>
                 </div>
               </div>
             </div>

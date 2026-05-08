@@ -14,6 +14,7 @@ import VipModal from './components/VipModal';
 import Home from './pages/Home';
 import PlayPage from './pages/PlayPage';
 import CategoryPage from './pages/CategoryPage';
+import SearchPage from './pages/SearchPage';
 import AdminLayout from './pages/admin/AdminLayout';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import AdminMovies from './pages/admin/AdminMovies';
@@ -246,6 +247,7 @@ function MainSite() {
         <div className="channel_container_modulelist">
           <Switch>
             <Route path="/" component={Home} />
+            <Route path="/search" component={SearchPage} />
             <Route path="/play/:id" component={PlayPage} />
             <Route path="/drama">{() => <CategoryPage categoryId="drama" />}</Route>
             <Route path="/anime">{() => <CategoryPage categoryId="anime" />}</Route>

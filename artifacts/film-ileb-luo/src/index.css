@@ -777,44 +777,80 @@ html, body {
 .play-mobile-layout { display: none; }
 .play-desktop-layout { display: block; }
 
+/* Search toggle: desktop shows inline, mobile shows tap target */
+.mobile-search-tap { display: none; }
+.desktop-search-box { display: block; }
+
 /* ======= MOBILE RESPONSIVE ======= */
 @media (max-width: 768px) {
   /* Hide desktop sidebar */
   .leftnav_left_box { display: none !important; }
 
-  /* Header spans full width */
+  /* Header — smaller on mobile */
   .topheader_top_header_box {
     left: 0 !important;
-    padding: 0 8px;
+    height: 40px;
+    padding: 0 6px;
   }
 
-  /* Shrink search on mobile */
+  /* Reduce search box on mobile */
   .search_search_box_wrap {
-    width: 130px;
+    width: 90px;
+    height: 26px;
+    padding: 0 8px;
+    border-radius: 13px;
   }
   .search_search_box_wrap:focus-within {
-    width: 160px;
+    width: 110px;
   }
 
-  /* Hide some header items on very small screens */
-  .historyrecord_record_box,
-  .useiku_iku_box { display: none !important; }
+  /* Mobile: show tap-to-search, hide full input box */
+  .mobile-search-tap { display: block; }
+  .desktop-search-box { display: none; }
 
-  /* Main content: no left margin, add bottom padding for nav */
+  /* VIP button smaller */
+  .youku_vip_pay_btn {
+    height: 24px;
+    padding: 3px 7px;
+    border-radius: 12px;
+  }
+  .crmvip_vip_icon { width: 14px; height: 14px; }
+
+  /* Hide some header items on mobile */
+  .historyrecord_record_box,
+  .useiku_iku_box,
+  .filter_filter_box { display: none !important; }
+
+  /* User avatar smaller */
+  .crmusercenter_avatar {
+    height: 26px;
+    padding: 2px 6px 2px 3px;
+    border-radius: 13px;
+  }
+  .crmusercenter_avatar img { width: 18px; height: 18px; }
+  .crmusercenter_avatar span { font-size: 10px; }
+
+  /* Main content: smaller top offset for 40px header */
   .channel_container {
     margin-left: 0 !important;
-    margin-top: 48px;
-    height: calc(100vh - 48px);
-    padding-bottom: 60px;
+    margin-top: 40px;
+    height: calc(100vh - 40px);
+    padding-bottom: 52px;
   }
 
   /* Show mobile bottom nav */
-  .mobile-bottom-nav { display: flex; }
+  .mobile-bottom-nav {
+    display: flex;
+    height: 52px;
+  }
+
+  /* Smaller bottom nav */
+  .mobile-nav-icon { width: 26px; height: 26px; }
+  .mobile-nav-label { font-size: 8px; }
+  .mobile-nav-item { gap: 2px; padding: 4px 2px; }
 
   /* Hero carousel smaller on mobile */
-  .swiper_wrap_3_CON {
-    height: 260px;
-  }
+  .swiper_wrap_3_CON { height: 200px; }
 
   /* Hide desktop bullet cards on mobile */
   .hero-pagination-desktop { display: none !important; }
@@ -824,38 +860,30 @@ html, body {
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 6px;
-    padding: 0 16px 12px;
+    gap: 5px;
+    padding: 0 12px 10px;
     pointer-events: auto;
     align-self: flex-end;
     flex: 1;
   }
 
   /* Smaller slide info on mobile */
-  .swiper_item_info_wrap_xr4-T {
-    padding: 0 0 16px 14px;
-  }
-  .swiper_item_title_1gdGI {
-    font-size: 16px !important;
-    margin-bottom: 6px;
-  }
+  .swiper_item_info_wrap_xr4-T { padding: 0 0 12px 10px; }
+  .swiper_item_title_1gdGI { font-size: 13px !important; margin-bottom: 4px; }
   .swiper_item_desc_1pk_I { display: none; }
-  .swiper_item_play_btn_3oJP- {
-    padding: 6px 16px;
-    font-size: 12px;
-  }
+  .swiper_item_play_btn_3oJP- { padding: 5px 12px; font-size: 10px; }
 
-  /* Section rows — convert horizontal scroll to 3-per-row grid on mobile */
-  .module_container { padding: 10px 8px 0; }
-  .main_title__lmLp { font-size: 14px; }
+  /* Section rows — smaller, 3-per-row grid */
+  .module_container { padding: 8px 6px 0; }
+  .main_title__lmLp { font-size: 12px; }
+  .hscroll_title_30U6K { margin-bottom: 8px; }
+  .main_title_wrap_2TE0C::before { height: 12px; }
 
-  .hscroll_content_fdYOj {
-    overflow: visible !important;
-  }
+  .hscroll_content_fdYOj { overflow: visible !important; }
   .card_container_1U0e6 {
     display: grid !important;
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px 6px !important;
+    gap: 6px 5px !important;
     flex-direction: unset !important;
     flex-wrap: unset !important;
   }
@@ -868,14 +896,17 @@ html, body {
   /* Category page grid — 3 per row on mobile */
   .mobile-grid-3 {
     grid-template-columns: repeat(3, 1fr) !important;
-    gap: 8px 6px !important;
+    gap: 6px 5px !important;
   }
 
-  /* Smaller card titles */
-  .pack_title_vhB7u { font-size: 11px; }
-  .pack_subtitle_1HHha { font-size: 10px; }
-  .lb_texts_23IEZ { font-size: 9px; }
-  .pack_mark_1hLkl { font-size: 8px; padding: 1px 4px; }
+  /* Smaller card text (poster size stays the same) */
+  .pack_title_vhB7u { font-size: 10px; margin-top: 4px; }
+  .pack_subtitle_1HHha { font-size: 9px; margin-top: 1px; }
+  .lb_texts_23IEZ { font-size: 8px; }
+  .pack_mark_1hLkl { font-size: 7px; padding: 1px 3px; top: 3px; left: 3px; }
+
+  /* Category page banner smaller */
+  .category-banner-title { font-size: 18px !important; }
 
   /* Play page: show mobile layout, hide desktop */
   .play-mobile-layout { display: block; }
@@ -883,16 +914,16 @@ html, body {
 
   /* Show mobile site name in header */
   .mobile-site-name { display: flex !important; }
+  .mobile-site-name span { font-size: 12px !important; }
 }
 
 @media (max-width: 480px) {
-  .search_search_box_wrap { width: 100px; }
-  .search_search_box_wrap:focus-within { width: 130px; }
   .crmvip_vip_pop_content { display: none; }
-  .filter_filter_box { display: none; }
-  .category-cards-wrap { padding: 10px 8px 80px !important; }
+  .category-cards-wrap { padding: 8px 6px 70px !important; }
+  .pack_title_vhB7u { font-size: 9px; }
+  .main_title__lmLp { font-size: 11px; }
 }
 
 @media (max-width: 768px) {
-  .category-cards-wrap { padding: 12px 10px 80px !important; }
+  .category-cards-wrap { padding: 10px 8px 70px !important; }
 }
