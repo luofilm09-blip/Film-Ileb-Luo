@@ -2,9 +2,9 @@ import { useEffect, useState } from 'react';
 import { Switch, Route, Router as WouterRouter, Redirect } from 'wouter';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { AppProvider, useApp } from './context/AppContext';
-import { hasAnyAdmin, setUser } from './lib/db';
+import { hasAnyAdmin, setUser, getAdminAuth, setAdminAuth } from './lib/db';
 import { auth } from './lib/firebase';
-import { createUserWithEmailAndPassword, updateProfile } from 'firebase/auth';
+import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPassword } from 'firebase/auth';
 import { serverTimestamp } from 'firebase/firestore';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
@@ -27,91 +27,178 @@ import AdminSEO from './pages/admin/AdminSEO';
 
 const queryClient = new QueryClient();
 
-const SETUP_CODE = 'FILMADMIN2025';
+const ADMIN_EMAIL = 'admin@film-ileb-luo.com';
+const INITIAL_PASSWORD = '4l4k4n54';
 
-function AdminSetupPage() {
-  const [form, setForm] = useState({ name: '', email: '', password: '', code: '' });
+function AdminPasswordLogin({ onSuccess }: { onSuccess: () => void }) {
+  const [password, setPassword] = useState('');
+  const [show, setShow] = useState(false);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const set = (k: string, v: string) => setForm(f => ({ ...f, [k]: v }));
-
   const submit = async () => {
-    if (form.code !== SETUP_CODE) { setError('INVALID SETUP CODE'); return; }
-    if (!form.name || !form.email || !form.password) { setError('ALL FIELDS ARE REQUIRED'); return; }
-    if (form.password.length < 6) { setError('PASSWORD MUST BE AT LEAST 6 CHARACTERS'); return; }
+    if (!password) { setError('PLEASE ENTER YOUR PASSWORD'); return; }
     setLoading(true); setError('');
     try {
-      const cred = await createUserWithEmailAndPassword(auth, form.email, form.password);
-      await updateProfile(cred.user, { displayName: form.name });
-      await setUser(cred.user.uid, {
-        uid: cred.user.uid, name: form.name.toUpperCase(), email: form.email, phone: '',
-        isAdmin: true, isVip: true, vipExpiry: null, status: 'active', createdAt: serverTimestamp() as any,
-      });
-      window.location.reload();
+      const adminAuth = await getAdminAuth();
+      const email = adminAuth?.email || ADMIN_EMAIL;
+      await signInWithEmailAndPassword(auth, email, password);
+      onSuccess();
     } catch (e: any) {
-      if (e.message?.includes('email-already-in-use')) setError('EMAIL ALREADY REGISTERED. LOG IN AND SET isAdmin=true IN FIREBASE CONSOLE.');
-      else setError('SETUP FAILED: ' + (e.message || 'UNKNOWN ERROR'));
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/wrong-password') {
+        setError('INCORRECT PASSWORD. PLEASE TRY AGAIN.');
+      } else {
+        setError('LOGIN FAILED: ' + (e.message || 'UNKNOWN ERROR'));
+      }
     } finally { setLoading(false); }
+  };
+
+  const handleKey = (e: React.KeyboardEvent) => {
+    if (e.key === 'Enter') submit();
   };
 
   return (
     <div style={{ minHeight: '100vh', background: '#0d0d0f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Arial, sans-serif' }}>
-      <div style={{ background: '#16161a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '40px 36px', width: 420, maxWidth: '95vw' }}>
-        <div style={{ textAlign: 'center', marginBottom: 28 }}>
-          <div style={{ fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 20, fontWeight: 900, letterSpacing: 1, marginBottom: 8 }}>
+      <div style={{ background: '#16161a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 16, padding: '40px 36px', width: 380, maxWidth: '95vw' }}>
+        <div style={{ textAlign: 'center', marginBottom: 32 }}>
+          <div style={{ fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 22, fontWeight: 900, letterSpacing: 1, marginBottom: 10 }}>
             <span style={{ color: '#e50914' }}>FILM ILEB</span><span style={{ color: '#fff' }}> LUO</span>
           </div>
-          <div style={{ color: '#e50914', fontSize: 11, fontWeight: 700, letterSpacing: 2 }}>ADMIN FIRST-TIME SETUP</div>
-          <div style={{ color: '#444', fontSize: 10, letterSpacing: 1, marginTop: 6 }}>NO ADMIN ACCOUNT FOUND — CREATE THE FIRST ADMIN</div>
+          <div style={{ width: 48, height: 48, background: 'rgba(229,9,20,0.1)', borderRadius: '50%', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 12px' }}>
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="#e50914" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M19 11H5a2 2 0 0 0-2 2v7a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7a2 2 0 0 0-2-2z"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
+          </div>
+          <div style={{ color: '#e50914', fontSize: 11, fontWeight: 700, letterSpacing: 2 }}>ADMIN ACCESS</div>
+          <div style={{ color: '#444', fontSize: 10, letterSpacing: 1, marginTop: 6 }}>ENTER YOUR ADMIN PASSWORD TO CONTINUE</div>
         </div>
-        {error && <div style={{ background: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#e50914', fontSize: 11, letterSpacing: 0.8 }}>{error}</div>}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <input style={inp} placeholder="ADMIN NAME" value={form.name} onChange={e => set('name', e.target.value)} />
-          <input style={inp} placeholder="ADMIN EMAIL" type="email" value={form.email} onChange={e => set('email', e.target.value)} />
-          <input style={inp} placeholder="PASSWORD (MIN 6 CHARS)" type="password" value={form.password} onChange={e => set('password', e.target.value)} />
-          <input style={inp} placeholder="SETUP CODE" value={form.code} onChange={e => set('code', e.target.value)} />
+
+        {error && (
+          <div style={{ background: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.3)', borderRadius: 8, padding: '10px 14px', marginBottom: 16, color: '#e50914', fontSize: 11, letterSpacing: 0.8 }}>
+            {error}
+          </div>
+        )}
+
+        <div style={{ position: 'relative', marginBottom: 16 }}>
+          <input
+            type={show ? 'text' : 'password'}
+            placeholder="ADMIN PASSWORD"
+            value={password}
+            onChange={e => setPassword(e.target.value)}
+            onKeyDown={handleKey}
+            autoFocus
+            style={{ width: '100%', padding: '13px 44px 13px 14px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 13, letterSpacing: 2, outline: 'none', boxSizing: 'border-box' }}
+          />
+          <button
+            onClick={() => setShow(!show)}
+            style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', background: 'none', border: 'none', cursor: 'pointer', color: '#444', padding: 4, display: 'flex' }}
+          >
+            {show ? (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24"/><path d="M1 1l22 22"/></svg>
+            ) : (
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round"><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/></svg>
+            )}
+          </button>
         </div>
-        <div style={{ color: '#333', fontSize: 10, letterSpacing: 0.8, margin: '10px 0' }}>SETUP CODE: FILMADMIN2025</div>
-        <button onClick={submit} disabled={loading} style={{ width: '100%', padding: '13px', background: loading ? '#333' : 'linear-gradient(135deg,#e50914,#c0000a)', border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: 2, cursor: 'pointer', marginTop: 8 }}>
-          {loading ? 'CREATING ADMIN...' : 'CREATE ADMIN ACCOUNT'}
+
+        <button
+          onClick={submit}
+          disabled={loading}
+          style={{ width: '100%', padding: '13px', background: loading ? '#333' : 'linear-gradient(135deg,#e50914,#c0000a)', border: 'none', borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontWeight: 700, fontSize: 12, letterSpacing: 2, cursor: loading ? 'not-allowed' : 'pointer' }}
+        >
+          {loading ? 'VERIFYING...' : 'ENTER ADMIN PANEL'}
         </button>
+
+        <div style={{ textAlign: 'center', marginTop: 20 }}>
+          <a href="/" style={{ color: '#333', fontSize: 10, letterSpacing: 1, textDecoration: 'none' }}>← BACK TO SITE</a>
+        </div>
       </div>
     </div>
   );
 }
 
-const inp: React.CSSProperties = { width: '100%', padding: '12px 14px', background: '#111', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 10, color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 12, letterSpacing: 1, outline: 'none', boxSizing: 'border-box' };
-
 function AdminGate() {
-  const { user, authLoading, openLogin } = useApp();
+  const { user, authLoading } = useApp();
   const [hasAdmin, setHasAdmin] = useState<boolean | null>(null);
+  const [setting, setSetting] = useState(false);
+  const [setupError, setSetupError] = useState('');
+  const [loginNeeded, setLoginNeeded] = useState(false);
 
   useEffect(() => {
-    hasAnyAdmin().then(setHasAdmin);
+    hasAnyAdmin().then(result => {
+      setHasAdmin(result);
+    });
   }, []);
 
-  if (authLoading || hasAdmin === null) {
-    return <div style={{ minHeight: '100vh', background: '#0d0d0f', display: 'flex', alignItems: 'center', justifyContent: 'center', color: '#333', fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: 1 }}>LOADING...</div>;
-  }
+  useEffect(() => {
+    if (hasAdmin === false && !setting) {
+      autoSetup();
+    }
+  }, [hasAdmin]);
 
-  if (!hasAdmin) {
-    return <AdminSetupPage />;
-  }
+  const autoSetup = async () => {
+    setSetting(true);
+    setSetupError('');
+    try {
+      let cred;
+      try {
+        cred = await createUserWithEmailAndPassword(auth, ADMIN_EMAIL, INITIAL_PASSWORD);
+        await updateProfile(cred.user, { displayName: 'ADMINISTRATOR' });
+        await setUser(cred.user.uid, {
+          uid: cred.user.uid,
+          name: 'ADMINISTRATOR',
+          email: ADMIN_EMAIL,
+          phone: '',
+          isAdmin: true,
+          isVip: true,
+          vipExpiry: null,
+          status: 'active',
+          createdAt: serverTimestamp() as any,
+        });
+        await setAdminAuth({ email: ADMIN_EMAIL });
+        setHasAdmin(true);
+      } catch (e: any) {
+        if (e.code === 'auth/email-already-in-use') {
+          await setAdminAuth({ email: ADMIN_EMAIL });
+          setHasAdmin(true);
+          setLoginNeeded(true);
+        } else {
+          throw e;
+        }
+      }
+    } catch (e: any) {
+      setSetupError('SETUP FAILED: ' + (e.message || 'UNKNOWN ERROR'));
+    } finally {
+      setSetting(false);
+    }
+  };
 
-  if (!user) {
+  if (authLoading || hasAdmin === null || setting) {
     return (
-      <div style={{ minHeight: '100vh', background: '#0d0d0f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 20, fontFamily: 'Arial, sans-serif' }}>
-        <div style={{ fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 22, fontWeight: 900 }}>
-          <span style={{ color: '#e50914' }}>FILM ILEB</span><span style={{ color: '#fff' }}> LUO</span>
+      <div style={{ minHeight: '100vh', background: '#0d0d0f', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16, fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ width: 32, height: 32, border: '2px solid rgba(229,9,20,0.3)', borderTop: '2px solid #e50914', borderRadius: '50%', animation: 'spin 1s linear infinite' }} />
+        <style>{`@keyframes spin { to { transform: rotate(360deg); } }`}</style>
+        <div style={{ color: '#333', fontSize: 11, letterSpacing: 1 }}>
+          {setting ? 'SETTING UP ADMIN...' : 'LOADING...'}
         </div>
-        <div style={{ color: '#555', fontSize: 11, letterSpacing: 1 }}>ADMIN ACCESS REQUIRED</div>
-        <button onClick={() => openLogin('login')} style={{ background: '#e50914', border: 'none', borderRadius: 10, color: '#fff', padding: '13px 32px', fontSize: 12, fontWeight: 700, letterSpacing: 2, cursor: 'pointer' }}>
-          LOG IN TO CONTINUE
-        </button>
-        <LoginModal />
       </div>
     );
+  }
+
+  if (setupError) {
+    return (
+      <div style={{ minHeight: '100vh', background: '#0d0d0f', display: 'flex', alignItems: 'center', justifyContent: 'center', fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ color: '#e50914', fontSize: 12, letterSpacing: 1, textAlign: 'center', maxWidth: 400 }}>
+          <div style={{ marginBottom: 12 }}>{setupError}</div>
+          <button onClick={() => window.location.reload()} style={{ background: '#e50914', border: 'none', borderRadius: 8, color: '#fff', padding: '10px 24px', fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: 'pointer' }}>RETRY</button>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user || loginNeeded) {
+    return <AdminPasswordLogin onSuccess={() => setLoginNeeded(false)} />;
   }
 
   if (!user.isAdmin) {
@@ -120,7 +207,6 @@ function AdminGate() {
         <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><path d="M12 8v4M12 16h.01"/></svg>
         <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: 1 }}>ACCESS DENIED</div>
         <div style={{ color: '#555', fontSize: 11, letterSpacing: 0.8 }}>YOU DO NOT HAVE ADMIN PRIVILEGES</div>
-        <div style={{ color: '#333', fontSize: 10, letterSpacing: 0.8, maxWidth: 300, textAlign: 'center' }}>CONTACT THE SITE OWNER TO GRANT ADMIN ACCESS IN FIREBASE CONSOLE</div>
         <a href="/" style={{ color: '#e50914', fontSize: 11, letterSpacing: 1, textDecoration: 'none', marginTop: 8 }}>BACK TO SITE</a>
       </div>
     );

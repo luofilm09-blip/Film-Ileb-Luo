@@ -114,6 +114,10 @@ export type SeoDoc = {
   sitemapPriority: string;
 };
 
+export type AdminAuthDoc = {
+  email: string;
+};
+
 // ── User operations ─────────────────────────────────────────────────────────
 
 export async function getUser(uid: string): Promise<UserDoc | null> {
@@ -147,6 +151,17 @@ export function subscribeUsers(cb: (users: UserDoc[]) => void) {
   return onSnapshot(query(collection(db, 'users'), orderBy('createdAt', 'desc')), snap => {
     cb(snap.docs.map(d => d.data() as UserDoc));
   });
+}
+
+// ── Admin auth settings ──────────────────────────────────────────────────────
+
+export async function getAdminAuth(): Promise<AdminAuthDoc | null> {
+  const snap = await getDoc(doc(db, 'settings', 'adminAuth'));
+  return snap.exists() ? (snap.data() as AdminAuthDoc) : null;
+}
+
+export async function setAdminAuth(data: AdminAuthDoc) {
+  await setDoc(doc(db, 'settings', 'adminAuth'), data);
 }
 
 // ── Content operations ──────────────────────────────────────────────────────
