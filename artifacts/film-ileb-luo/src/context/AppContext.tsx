@@ -7,6 +7,8 @@ import { serverTimestamp } from 'firebase/firestore';
 import { auth, googleProvider } from '../lib/firebase';
 import { getUser, setUser, getUserByPhone, UserDoc } from '../lib/db';
 
+export const ADMIN_EMAILS = ['mainplatform.nexus@gmail.com', 'panzersonic@gmail.com'];
+
 export type AppUser = {
   uid: string;
   name: string;
@@ -39,13 +41,14 @@ type AppContextType = {
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
 function fbUserToApp(fb: FBUser, doc?: UserDoc | null): AppUser {
+  const email = doc?.email || fb.email || '';
   return {
     uid: fb.uid,
     name: doc?.name || fb.displayName || 'USER',
-    email: doc?.email || fb.email || '',
+    email,
     phone: doc?.phone || '',
     isVip: doc?.isVip || false,
-    isAdmin: doc?.isAdmin || false,
+    isAdmin: ADMIN_EMAILS.includes(email.toLowerCase()),
     photoURL: fb.photoURL || '',
     vipExpiry: doc?.vipExpiry ? (doc.vipExpiry as any).toDate?.().toISOString() : undefined,
   };

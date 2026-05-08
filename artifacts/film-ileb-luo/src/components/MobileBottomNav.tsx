@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
-import { useApp } from '../context/AppContext';
+import { useApp, ADMIN_EMAILS } from '../context/AppContext';
 
 const NAV_ITEMS = [
   {
@@ -69,8 +69,9 @@ const MORE_ITEMS = [
 
 export default function MobileBottomNav() {
   const [location, navigate] = useLocation();
-  const { openVip, openLogin, isLoggedIn } = useApp();
+  const { openVip, openLogin, isLoggedIn, user } = useApp();
   const [moreOpen, setMoreOpen] = useState(false);
+  const isAdmin = user?.email ? ADMIN_EMAILS.includes(user.email.toLowerCase()) : false;
 
   return (
     <>
@@ -88,7 +89,7 @@ export default function MobileBottomNav() {
                 </button>
               ))}
             </div>
-            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, display: 'flex', gap: 10 }}>
+            <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', paddingTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <button onClick={() => { openVip(); setMoreOpen(false); }}
                 style={{ flex: 1, background: 'linear-gradient(135deg,#c8820a,#f5c840)', border: 'none', borderRadius: 10, color: '#3d1f00', padding: '12px', fontSize: 11, fontWeight: 900, letterSpacing: 1, cursor: 'pointer', fontFamily: 'Arial, sans-serif' }}>
                 ★ RENEW VIP
@@ -97,6 +98,16 @@ export default function MobileBottomNav() {
                 <button onClick={() => { openLogin('login'); setMoreOpen(false); }}
                   style={{ flex: 1, background: '#e50914', border: 'none', borderRadius: 10, color: '#fff', padding: '12px', fontSize: 11, fontWeight: 900, letterSpacing: 1, cursor: 'pointer', fontFamily: 'Arial, sans-serif' }}>
                   LOG IN
+                </button>
+              )}
+              {isAdmin && (
+                <button onClick={() => { navigate('/admin'); setMoreOpen(false); }}
+                  style={{ width: '100%', background: 'rgba(229,9,20,0.12)', border: '1px solid rgba(229,9,20,0.35)', borderRadius: 10, color: '#e50914', padding: '12px', fontSize: 11, fontWeight: 900, letterSpacing: 1.5, cursor: 'pointer', fontFamily: 'Arial, sans-serif', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#e50914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                    <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+                    <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+                  </svg>
+                  ADMIN PANEL
                 </button>
               )}
             </div>

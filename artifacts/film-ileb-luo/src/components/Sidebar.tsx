@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { navItems } from '../data/content';
+import { useApp } from '../context/AppContext';
 
 export default function Sidebar() {
   const [location] = useLocation();
   const [hovered, setHovered] = useState<string | null>(null);
+  const { user } = useApp();
 
   return (
     <div className="leftnav_left_box" style={{ display: 'flex', flexDirection: 'column' }}>
@@ -53,34 +55,36 @@ export default function Sidebar() {
         </div>
       </div>
 
-      {/* Admin Panel Link — pinned to bottom */}
-      <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '10px 6px' }}>
-        <Link
-          href="/admin"
-          style={{
-            display: 'flex',
-            flexDirection: 'column',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: 4,
-            padding: '8px 4px',
-            borderRadius: 8,
-            background: location.startsWith('/admin') ? 'rgba(229,9,20,0.18)' : 'rgba(229,9,20,0.08)',
-            border: `1px solid ${location.startsWith('/admin') ? 'rgba(229,9,20,0.5)' : 'rgba(229,9,20,0.2)'}`,
-            textDecoration: 'none',
-            cursor: 'pointer',
-            transition: 'all 0.15s',
-          }}
-          onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(229,9,20,0.22)'; }}
-          onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = location.startsWith('/admin') ? 'rgba(229,9,20,0.18)' : 'rgba(229,9,20,0.08)'; }}
-        >
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e50914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
-            <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
-          </svg>
-          <span style={{ color: '#e50914', fontSize: 8, fontWeight: 900, letterSpacing: 1.2, fontFamily: 'Arial, sans-serif' }}>ADMIN</span>
-        </Link>
-      </div>
+      {/* Admin Panel Link — only visible to admin users */}
+      {user?.isAdmin && (
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.07)', padding: '10px 6px' }}>
+          <Link
+            href="/admin"
+            style={{
+              display: 'flex',
+              flexDirection: 'column',
+              alignItems: 'center',
+              justifyContent: 'center',
+              gap: 4,
+              padding: '8px 4px',
+              borderRadius: 8,
+              background: location.startsWith('/admin') ? 'rgba(229,9,20,0.18)' : 'rgba(229,9,20,0.08)',
+              border: `1px solid ${location.startsWith('/admin') ? 'rgba(229,9,20,0.5)' : 'rgba(229,9,20,0.2)'}`,
+              textDecoration: 'none',
+              cursor: 'pointer',
+              transition: 'all 0.15s',
+            }}
+            onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'rgba(229,9,20,0.22)'; }}
+            onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = location.startsWith('/admin') ? 'rgba(229,9,20,0.18)' : 'rgba(229,9,20,0.08)'; }}
+          >
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#e50914" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="3" width="7" height="7"/><rect x="14" y="3" width="7" height="7"/>
+              <rect x="14" y="14" width="7" height="7"/><rect x="3" y="14" width="7" height="7"/>
+            </svg>
+            <span style={{ color: '#e50914', fontSize: 8, fontWeight: 900, letterSpacing: 1.2, fontFamily: 'Arial, sans-serif' }}>ADMIN</span>
+          </Link>
+        </div>
+      )}
     </div>
   );
 }
