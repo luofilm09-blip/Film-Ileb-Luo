@@ -1,7 +1,20 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useLocation } from 'wouter';
-import { getCarousel, CarouselDoc } from '../lib/db';
+import { getCarousel, CarouselDoc, getAllContent, ContentDoc } from '../lib/db';
 import { swiperSlides, bulletCards } from '../data/content';
+
+function featuredToCarousel(c: ContentDoc): CarouselDoc {
+  return {
+    id: c.id,
+    image: c.thumbnail || '',
+    title: c.title,
+    description: c.description || '',
+    contentId: c.id!,
+    isActive: true,
+    order: 999,
+    createdAt: c.createdAt,
+  };
+}
 
 export default function HeroCarousel() {
   const [current, setCurrent] = useState(0);
@@ -11,8 +24,15 @@ export default function HeroCarousel() {
   const [loaded, setLoaded] = useState(false);
 
   useEffect(() => {
-    getCarousel().then(items => {
-      setCarouselItems(items);
+    Promise.all([
+      getCarousel(),
+      getAllContent(),
+    ]).then(([carousel, content]) => {
+      const featured = content.filter(c => c.isFeatured && c.thumbnail);
+      const featuredAsCarousel = featured.map(featuredToCarousel);
+      const carouselIds = new Set(carousel.map(c => c.contentId));
+      const uniqueFeatured = featuredAsCarousel.filter(f => !carouselIds.has(f.contentId));
+      setCarouselItems([...carousel, ...uniqueFeatured]);
       setLoaded(true);
     }).catch(() => setLoaded(true));
   }, []);
@@ -33,10 +53,12 @@ export default function HeroCarousel() {
     return () => { if (timerRef.current) clearInterval(timerRef.current); };
   }, [startTimer]);
 
-  if (!loaded) return <div style={{ height: 400, background: '#111' }} />;
+  if (!loaded) return <div style={{ height: 390, background: '#111' }} />;
 
   if (useFirebase) {
-    const slide = carouselItems[current];
+    const safeIdx = current >= carouselItems.length ? 0 : current;
+    const slide = carouselItems[safeIdx];
+    if (!slide) return <div style={{ height: 390, background: '#111' }} />;
     return (
       <div className="swiper_wrap_3_CON"
         onMouseEnter={() => { if (timerRef.current) clearInterval(timerRef.current); }}
@@ -44,7 +66,7 @@ export default function HeroCarousel() {
         <div className="swiper_container_custom">
           <div className="swiper-wrapper">
             {carouselItems.map((item, i) => (
-              <div key={item.id} className={`swiper-slide${i === current ? ' active' : ''}`}>
+              <div key={item.id || i} className={`swiper-slide${i === current ? ' active' : ''}`}>
                 <div className="swiper_item_img_wrap_2vvR2">
                   <div className="swiper_show_img_qwMgx">
                     <a href="#" onClick={e => { e.preventDefault(); if (item.contentId) navigate(`/play/${item.contentId}`); }}>
@@ -87,14 +109,14 @@ export default function HeroCarousel() {
             </div>
           </div>
 
-          <div className="custom_pagination_wrap_zvWry">
+          <div className="custom_pagination_wrap_zvWry hero-pagination-desktop">
             <div className="hscroll_wrapper_3CJzY">
               <div className="hscroll_content_fdYOj">
                 <div className="card_container_1U0e6">
                   {carouselItems.slice(0, 7).map((item, i) => {
                     const isActive = i === current;
                     return (
-                      <div key={item.id} className="bullet_wrap_1yE2X g-col-swiper" onClick={() => goTo(i)}>
+                      <div key={item.id || i} className="bullet_wrap_1yE2X g-col-swiper" onClick={() => goTo(i)}>
                         <div className="yk_card_368vl">
                           <a href="#" onClick={e => { e.preventDefault(); goTo(i); }} style={{ position: 'relative', display: 'block' }}>
                             <div className="pack_wrap_2xjIs pack_vertical_ilL2U" style={{ width: 172, height: 96 }}>
@@ -118,13 +140,20 @@ export default function HeroCarousel() {
               </div>
             </div>
           </div>
+
+          {/* Mobile dot indicators */}
+          <div className="hero-dots-mobile">
+            {carouselItems.slice(0, 8).map((_, i) => (
+              <div key={i} onClick={() => goTo(i)}
+                style={{ width: i === current ? 18 : 6, height: 6, borderRadius: 3, background: i === current ? '#e50914' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s', cursor: 'pointer' }} />
+            ))}
+          </div>
         </div>
         <div className="swiper_right_shadow_1Q1Dm" />
       </div>
     );
   }
 
-  // Fallback to static data
   const slide = swiperSlides[current];
   return (
     <div className="swiper_wrap_3_CON"
@@ -188,7 +217,7 @@ export default function HeroCarousel() {
           </div>
         </div>
 
-        <div className="custom_pagination_wrap_zvWry">
+        <div className="custom_pagination_wrap_zvWry hero-pagination-desktop">
           <div className="hscroll_wrapper_3CJzY">
             <div className="hscroll_content_fdYOj">
               <div className="card_container_1U0e6">
@@ -229,6 +258,13 @@ export default function HeroCarousel() {
               </div>
             </div>
           </div>
+        </div>
+
+        <div className="hero-dots-mobile">
+          {swiperSlides.slice(0, 8).map((_, i) => (
+            <div key={i} onClick={() => goTo(i)}
+              style={{ width: i === current ? 18 : 6, height: 6, borderRadius: 3, background: i === current ? '#e50914' : 'rgba(255,255,255,0.3)', transition: 'all 0.3s', cursor: 'pointer' }} />
+          ))}
         </div>
       </div>
       <div className="swiper_right_shadow_1Q1Dm" />

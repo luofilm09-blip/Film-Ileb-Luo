@@ -8,6 +8,7 @@ import { createUserWithEmailAndPassword, updateProfile, signInWithEmailAndPasswo
 import { serverTimestamp } from 'firebase/firestore';
 import Sidebar from './components/Sidebar';
 import Header from './components/Header';
+import MobileBottomNav from './components/MobileBottomNav';
 import LoginModal from './components/LoginModal';
 import VipModal from './components/VipModal';
 import Home from './pages/Home';
@@ -238,6 +239,7 @@ function MainSite() {
     <>
       <Sidebar />
       <Header />
+      <MobileBottomNav />
       <LoginModal />
       <VipModal />
       <div className="channel_container">

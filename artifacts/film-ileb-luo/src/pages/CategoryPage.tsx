@@ -67,16 +67,17 @@ export default function CategoryPage({ categoryId }: Props) {
       try {
         let q;
         if (catId === 'live') {
-          q = query(collection(db, 'content'), where('type', '==', 'live'), orderBy('createdAt', 'desc'));
+          q = query(collection(db, 'content'), where('type', '==', 'live'));
         } else if (catId === 'vip') {
-          q = query(collection(db, 'content'), where('badge', 'in', ['VIP','SVIP']), orderBy('createdAt', 'desc'));
-        } else if (catId === 'new-films') {
-          q = query(collection(db, 'content'), where('type', '==', 'movie'), orderBy('createdAt', 'desc'));
+          q = query(collection(db, 'content'), where('badge', 'in', ['VIP','SVIP']));
+        } else if (catId === 'new-films' || catId === 'movies') {
+          q = query(collection(db, 'content'), where('type', '==', 'movie'));
         } else {
-          q = query(collection(db, 'content'), where('category', '==', catId), orderBy('createdAt', 'desc'));
+          q = query(collection(db, 'content'), where('category', '==', catId));
         }
         const snap = await getDocs(q);
         const data = snap.docs.map(d => ({ id: d.id, ...d.data() } as ContentDoc));
+        data.sort((a, b) => ((b.createdAt as any)?.seconds || 0) - ((a.createdAt as any)?.seconds || 0));
         setRawItems(data);
         setCards(data.map(contentToCard));
       } catch (e) {
@@ -124,9 +125,9 @@ export default function CategoryPage({ categoryId }: Props) {
       </div>
 
       {/* Cards */}
-      <div style={{ padding: '16px 24px 32px' }}>
+      <div className="category-cards-wrap" style={{ padding: '16px 24px 32px' }}>
         {loading ? (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px 10px' }}>
+          <div className="mobile-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px 10px' }}>
             {Array.from({ length: 12 }).map((_, i) => (
               <div key={i} style={{ background: '#1a1a1a', borderRadius: 6, paddingBottom: '145%', position: 'relative', opacity: 0.4 }} />
             ))}
@@ -139,7 +140,7 @@ export default function CategoryPage({ categoryId }: Props) {
             <div style={{ width: 40, height: 2, background: meta.color, borderRadius: 2, margin: '16px auto 0', opacity: 0.5 }} />
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px 10px' }}>
+          <div className="mobile-grid-3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '16px 10px' }}>
             {cards.map(card => <VideoCard key={card.id} card={card} />)}
           </div>
         )}
