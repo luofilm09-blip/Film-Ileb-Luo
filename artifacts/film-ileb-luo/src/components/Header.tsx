@@ -1,7 +1,12 @@
 import { useState } from 'react';
+import { useApp } from '../context/AppContext';
+import { useLocation } from 'wouter';
 
 export default function Header() {
   const [searchValue, setSearchValue] = useState('');
+  const { user, isLoggedIn, openLogin, openVip, logout } = useApp();
+  const [, navigate] = useLocation();
+  const [userMenuOpen, setUserMenuOpen] = useState(false);
 
   return (
     <div className="topheader_top_header_box">
@@ -29,14 +34,16 @@ export default function Header() {
         </div>
 
         {/* VIP Button */}
-        <div className="crmvip_vip_wrap">
-          <a className="youku_vip_pay_btn" href="#">
+        <div className="crmvip_vip_wrap" onClick={openVip} style={{ cursor: 'pointer' }}>
+          <a className="youku_vip_pay_btn" href="#" onClick={e => e.preventDefault()}>
             <img
               className="crmvip_vip_icon"
               src="https://gw.alicdn.com/imgextra/i2/O1CN01G2pBlc1jH83k0Uw4y_!!6000000004522-2-tps-72-72.png"
               alt="VIP"
             />
-            <div className="crmvip_vip_pop_content" style={{ fontFamily: 'Arial, sans-serif' }}>RENEW VIP</div>
+            <div className="crmvip_vip_pop_content" style={{ fontFamily: 'Arial, sans-serif' }}>
+              {user?.isVip ? 'VIP ACTIVE' : 'RENEW VIP'}
+            </div>
           </a>
         </div>
 
@@ -67,14 +74,67 @@ export default function Header() {
         </div>
 
         {/* User */}
-        <div className="crmusercenter_user_center_box">
-          <div className="crmusercenter_avatar">
-            <img
-              src="https://img.alicdn.com/imgextra/i4/O1CN01sm6Pik1QpxWLtcGPd_!!6000000002026-2-tps-180-180.png"
-              alt=""
-            />
-            <span style={{ fontFamily: 'Arial, sans-serif' }}>LOG IN</span>
-          </div>
+        <div className="crmusercenter_user_center_box" style={{ position: 'relative' }}>
+          {isLoggedIn ? (
+            <>
+              <div
+                className="crmusercenter_avatar"
+                onClick={() => setUserMenuOpen(!userMenuOpen)}
+                style={{ cursor: 'pointer' }}
+              >
+                <div style={{ width: 28, height: 28, borderRadius: '50%', background: 'linear-gradient(135deg,#e50914,#6a0008)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 12, fontWeight: 700, color: '#fff', flexShrink: 0 }}>
+                  {user?.name?.[0] || 'U'}
+                </div>
+                <span style={{ fontFamily: 'Arial, sans-serif', fontSize: 11, marginLeft: 6, maxWidth: 80, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                  {user?.name?.split(' ')[0] || 'USER'}
+                </span>
+              </div>
+
+              {userMenuOpen && (
+                <>
+                  <div onClick={() => setUserMenuOpen(false)} style={{ position: 'fixed', inset: 0, zIndex: 998 }} />
+                  <div style={{ position: 'absolute', top: '100%', right: 0, marginTop: 8, background: '#1a1a1a', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 12, padding: '8px 0', minWidth: 180, zIndex: 999, boxShadow: '0 16px 48px rgba(0,0,0,0.6)' }}>
+                    <div style={{ padding: '10px 16px 14px', borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+                      <div style={{ color: '#fff', fontSize: 12, fontWeight: 700 }}>{user?.name}</div>
+                      <div style={{ color: '#555', fontSize: 10, marginTop: 2 }}>{user?.email}</div>
+                      {user?.isVip && <div style={{ color: '#f5a623', fontSize: 9, marginTop: 4, letterSpacing: 1 }}>👑 VIP MEMBER</div>}
+                    </div>
+                    {[
+                      { label: 'MY PROFILE', action: () => {} },
+                      { label: 'WATCH HISTORY', action: () => {} },
+                      { label: 'MY WATCHLIST', action: () => {} },
+                      ...(user?.isAdmin ? [{ label: 'ADMIN PANEL', action: () => { setUserMenuOpen(false); navigate('/admin'); } }] : []),
+                    ].map(({ label, action }) => (
+                      <div key={label} onClick={() => { action(); setUserMenuOpen(false); }} style={{ padding: '10px 16px', color: '#888', fontSize: 11, letterSpacing: 0.8, cursor: 'pointer', transition: 'all 0.15s' }}
+                        onMouseEnter={e => { (e.currentTarget as HTMLElement).style.color = '#fff'; (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
+                        onMouseLeave={e => { (e.currentTarget as HTMLElement).style.color = '#888'; (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
+                        {label}
+                      </div>
+                    ))}
+                    <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', marginTop: 4 }}>
+                      <div onClick={() => { logout(); setUserMenuOpen(false); }} style={{ padding: '10px 16px', color: '#e50914', fontSize: 11, letterSpacing: 0.8, cursor: 'pointer' }}
+                        onMouseEnter={e => (e.currentTarget.style.background = 'rgba(229,9,20,0.05)')}
+                        onMouseLeave={e => (e.currentTarget.style.background = 'transparent')}>
+                        LOG OUT
+                      </div>
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          ) : (
+            <div
+              className="crmusercenter_avatar"
+              onClick={() => openLogin('login')}
+              style={{ cursor: 'pointer' }}
+            >
+              <img
+                src="https://img.alicdn.com/imgextra/i4/O1CN01sm6Pik1QpxWLtcGPd_!!6000000002026-2-tps-180-180.png"
+                alt=""
+              />
+              <span style={{ fontFamily: 'Arial, sans-serif' }}>LOG IN</span>
+            </div>
+          )}
         </div>
       </div>
     </div>
