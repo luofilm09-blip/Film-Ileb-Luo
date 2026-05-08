@@ -1,19 +1,27 @@
 import { createContext, useContext, useState, useEffect, ReactNode } from 'react';
+import {
+  onAuthStateChanged, signInWithEmailAndPassword, createUserWithEmailAndPassword,
+  signInWithPopup, signOut, updateProfile, User as FBUser,
+} from 'firebase/auth';
+import { serverTimestamp } from 'firebase/firestore';
+import { auth, googleProvider } from '../lib/firebase';
+import { getUser, setUser, getUserByPhone, UserDoc } from '../lib/db';
 
-export type User = {
-  id: string;
+export type AppUser = {
+  uid: string;
   name: string;
   email: string;
   phone: string;
-  avatar?: string;
   isVip: boolean;
+  isAdmin: boolean;
+  photoURL?: string;
   vipExpiry?: string;
-  isAdmin?: boolean;
 };
 
 type AppContextType = {
-  user: User | null;
+  user: AppUser | null;
   isLoggedIn: boolean;
+  authLoading: boolean;
   loginModalOpen: boolean;
   loginTab: 'login' | 'register';
   vipModalOpen: boolean;
@@ -21,54 +29,112 @@ type AppContextType = {
   closeLogin: () => void;
   openVip: () => void;
   closeVip: () => void;
-  login: (user: User) => void;
-  logout: () => void;
+  refreshUser: () => Promise<void>;
+  loginWithEmailOrPhone: (identifier: string, password: string) => Promise<void>;
+  registerUser: (name: string, email: string, phone: string, password: string) => Promise<void>;
+  loginWithGoogle: () => Promise<void>;
+  logout: () => Promise<void>;
 };
 
 const AppContext = createContext<AppContextType>({} as AppContextType);
 
+function fbUserToApp(fb: FBUser, doc?: UserDoc | null): AppUser {
+  return {
+    uid: fb.uid,
+    name: doc?.name || fb.displayName || 'USER',
+    email: doc?.email || fb.email || '',
+    phone: doc?.phone || '',
+    isVip: doc?.isVip || false,
+    isAdmin: doc?.isAdmin || false,
+    photoURL: fb.photoURL || '',
+    vipExpiry: doc?.vipExpiry ? (doc.vipExpiry as any).toDate?.().toISOString() : undefined,
+  };
+}
+
 export function AppProvider({ children }: { children: ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [user, setAppUser] = useState<AppUser | null>(null);
+  const [authLoading, setAuthLoading] = useState(true);
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [loginTab, setLoginTab] = useState<'login' | 'register'>('login');
   const [vipModalOpen, setVipModalOpen] = useState(false);
 
   useEffect(() => {
-    const stored = localStorage.getItem('film_user');
-    if (stored) setUser(JSON.parse(stored));
-
-    const users: any[] = JSON.parse(localStorage.getItem('film_users') || '[]');
-    if (!users.find((u: any) => u.id === 'admin001')) {
-      users.unshift({
-        id: 'admin001',
-        name: 'ADMINISTRATOR',
-        email: 'admin@filmilebluo.com',
-        phone: '0000000000',
-        password: 'admin123',
-        isVip: true,
-        isAdmin: true,
-        joinedAt: new Date().toISOString(),
-        status: 'active',
-      });
-      localStorage.setItem('film_users', JSON.stringify(users));
-    }
+    const unsub = onAuthStateChanged(auth, async fb => {
+      if (fb) {
+        const doc = await getUser(fb.uid);
+        setAppUser(fbUserToApp(fb, doc));
+      } else {
+        setAppUser(null);
+      }
+      setAuthLoading(false);
+    });
+    return unsub;
   }, []);
 
-  const login = (u: User) => {
-    setUser(u);
-    localStorage.setItem('film_user', JSON.stringify(u));
-    setLoginModalOpen(false);
+  const refreshUser = async () => {
+    const fb = auth.currentUser;
+    if (!fb) return;
+    const doc = await getUser(fb.uid);
+    setAppUser(fbUserToApp(fb, doc));
   };
 
-  const logout = () => {
-    setUser(null);
-    localStorage.removeItem('film_user');
+  const loginWithEmailOrPhone = async (identifier: string, password: string) => {
+    let email = identifier.trim();
+    if (!email.includes('@')) {
+      const userDoc = await getUserByPhone(email);
+      if (!userDoc) throw new Error('NO ACCOUNT FOUND WITH THIS PHONE NUMBER');
+      email = userDoc.email;
+    }
+    await signInWithEmailAndPassword(auth, email, password);
+  };
+
+  const registerUser = async (name: string, email: string, phone: string, password: string) => {
+    const existing = await getUserByPhone(phone);
+    if (existing) throw new Error('PHONE NUMBER ALREADY REGISTERED');
+    const cred = await createUserWithEmailAndPassword(auth, email, password);
+    await updateProfile(cred.user, { displayName: name });
+    await setUser(cred.user.uid, {
+      uid: cred.user.uid,
+      name,
+      email,
+      phone,
+      isAdmin: false,
+      isVip: false,
+      vipExpiry: null,
+      status: 'active',
+      createdAt: serverTimestamp() as any,
+    });
+  };
+
+  const loginWithGoogle = async () => {
+    const cred = await signInWithPopup(auth, googleProvider);
+    const fb = cred.user;
+    const existing = await getUser(fb.uid);
+    if (!existing) {
+      await setUser(fb.uid, {
+        uid: fb.uid,
+        name: fb.displayName || 'GOOGLE USER',
+        email: fb.email || '',
+        phone: '',
+        isAdmin: false,
+        isVip: false,
+        vipExpiry: null,
+        status: 'active',
+        createdAt: serverTimestamp() as any,
+        photoURL: fb.photoURL || '',
+      });
+    }
+  };
+
+  const logout = async () => {
+    await signOut(auth);
   };
 
   return (
     <AppContext.Provider value={{
       user,
       isLoggedIn: !!user,
+      authLoading,
       loginModalOpen,
       loginTab,
       vipModalOpen,
@@ -76,7 +142,10 @@ export function AppProvider({ children }: { children: ReactNode }) {
       closeLogin: () => setLoginModalOpen(false),
       openVip: () => setVipModalOpen(true),
       closeVip: () => setVipModalOpen(false),
-      login,
+      refreshUser,
+      loginWithEmailOrPhone,
+      registerUser,
+      loginWithGoogle,
       logout,
     }}>
       {children}

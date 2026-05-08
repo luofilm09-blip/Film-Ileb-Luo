@@ -1,189 +1,143 @@
-import { useState, useEffect } from 'react';
-import { navItems } from '../../data/content';
+import { useState, useEffect, useRef } from 'react';
+import { subscribeContent, addContent, updateContent, deleteContent, ContentDoc } from '../../lib/db';
+import { uploadFile, getStoragePath } from '../../lib/storage';
+import { PlusIcon, EditIcon, TrashIcon, UploadIcon } from '../../components/Icons';
 
-const emptyForm = { title: '', description: '', category: 'drama', thumbnail: '', year: '', totalEpisodes: '', rating: '', tags: '', badge: 'EXCLUSIVE', isFeatured: false, status: 'ongoing' };
-type Series = typeof emptyForm & { id: string; uploadedAt: string; views: number };
+const CATEGORIES = ['drama','anime','variety','short','kids','vip','documentary','sports','culture'];
+const BADGES = ['EXCLUSIVE','HOT CHART TOP','VIP','NEW ARRIVAL','PREMIERE','UPDATED NEW','FREE NOW'];
+const STATUS = ['ongoing','completed','upcoming'];
+const empty = { title:'',description:'',category:'drama',thumbnail:'',year:'',totalEpisodes:'',rating:'',tags:'',badge:'EXCLUSIVE',isFeatured:false,status:'ongoing' };
 
 export default function AdminSeries() {
-  const [series, setSeries] = useState<Series[]>([]);
+  const [series, setSeries] = useState<ContentDoc[]>([]);
+  const [form, setForm] = useState(empty);
+  const [editId, setEditId] = useState<string|null>(null);
   const [showForm, setShowForm] = useState(false);
-  const [editId, setEditId] = useState<string | null>(null);
-  const [form, setForm] = useState({ ...emptyForm });
+  const [saving, setSaving] = useState(false);
+  const [thumbPct, setThumbPct] = useState(0);
   const [search, setSearch] = useState('');
-  const [confirm, setConfirm] = useState<string | null>(null);
+  const thumbRef = useRef<HTMLInputElement>(null);
 
-  useEffect(() => { setSeries(JSON.parse(localStorage.getItem('film_series') || '[]')); }, []);
-  const save = (data: Series[]) => { setSeries(data); localStorage.setItem('film_series', JSON.stringify(data)); };
+  useEffect(() => subscribeContent('series', setSeries), []);
+
   const set = (k: string, v: any) => setForm(f => ({ ...f, [k]: v }));
 
-  const handleSubmit = () => {
-    if (!form.title || !form.category) return;
-    if (editId) {
-      save(series.map(s => s.id === editId ? { ...form, id: editId, uploadedAt: s.uploadedAt, views: s.views } : s));
-    } else {
-      save([{ ...form, id: `s${Date.now()}`, uploadedAt: new Date().toISOString(), views: 0 }, ...series]);
-    }
-    setForm({ ...emptyForm }); setShowForm(false); setEditId(null);
+  const handleThumb = async (file: File) => {
+    const url = await uploadFile(file, getStoragePath('thumbnail', file.name), p => setThumbPct(p));
+    set('thumbnail', url); setThumbPct(0);
   };
 
-  const handleEdit = (s: Series) => {
-    setForm({ title: s.title, description: s.description, category: s.category, thumbnail: s.thumbnail, year: s.year, totalEpisodes: s.totalEpisodes, rating: s.rating, tags: s.tags, badge: s.badge, isFeatured: s.isFeatured, status: s.status });
-    setEditId(s.id); setShowForm(true);
+  const save = async () => {
+    if (!form.title) return;
+    setSaving(true);
+    try {
+      const data = { title:form.title, description:form.description, category:form.category, thumbnail:form.thumbnail, videoUrl:'', year:form.year, duration:'', rating:form.rating, tags:form.tags, badge:form.badge, isFeatured:form.isFeatured, status:form.status, totalEpisodes:form.totalEpisodes, language:'', isActive:true };
+      if (editId) await updateContent(editId, { ...data, type:'series' });
+      else await addContent({ ...data, type:'series' });
+      setForm(empty); setEditId(null); setShowForm(false);
+    } finally { setSaving(false); }
   };
 
-  const handleDelete = (id: string) => { save(series.filter(s => s.id !== id)); setConfirm(null); };
+  const edit = (s: ContentDoc) => {
+    setForm({ title:s.title,description:s.description,category:s.category,thumbnail:s.thumbnail,year:s.year,totalEpisodes:s.totalEpisodes||'',rating:s.rating,tags:s.tags,badge:s.badge,isFeatured:s.isFeatured,status:s.status||'ongoing' });
+    setEditId(s.id!); setShowForm(true);
+  };
+  const del = async (id: string) => { if (confirm('DELETE THIS SERIES?')) await deleteContent(id); };
+
   const filtered = series.filter(s => s.title.toLowerCase().includes(search.toLowerCase()));
-  const categories = navItems.filter(n => n.id !== 'home' && n.id !== 'vip');
 
   return (
-    <div style={{ padding: '28px 32px', color: '#fff' }}>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
+    <div style={{ padding: '32px 36px', fontFamily: 'Arial, sans-serif' }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 28 }}>
         <div>
-          <h1 style={{ margin: 0, fontSize: 22, fontWeight: 900, letterSpacing: 1 }}>TV SERIES</h1>
-          <p style={{ margin: '4px 0 0', color: '#555', fontSize: 11, letterSpacing: 1 }}>{series.length} SERIES UPLOADED</p>
+          <h1 style={{ color: '#fff', fontSize: 22, fontWeight: 900, letterSpacing: 1, margin: 0, fontFamily: 'Arial Black, Arial, sans-serif' }}>TV SERIES</h1>
+          <p style={{ color: '#444', fontSize: 11, letterSpacing: 1, margin: '6px 0 0' }}>{series.length} SERIES IN LIBRARY</p>
         </div>
-        <button onClick={() => { setShowForm(true); setEditId(null); setForm({ ...emptyForm }); }} style={btnStyle('#e50914')}>+ ADD SERIES</button>
+        <button onClick={() => { setForm(empty); setEditId(null); setShowForm(!showForm); }} style={btnStyle('#e50914')}>
+          <PlusIcon size={14} /> {showForm ? 'CANCEL' : 'ADD SERIES'}
+        </button>
       </div>
 
-      <input placeholder="SEARCH SERIES..." value={search} onChange={e => setSearch(e.target.value)} style={{ ...inputStyle, width: 300, marginBottom: 20 }} />
-
       {showForm && (
-        <div style={{ background: '#16161a', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 14, padding: 24, marginBottom: 24 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-            <div style={{ color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: 1 }}>{editId ? 'EDIT SERIES' : 'ADD NEW SERIES'}</div>
-            <button onClick={() => { setShowForm(false); setEditId(null); }} style={{ background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 18 }}>✕</button>
-          </div>
+        <div style={cardStyle}>
+          <h3 style={sectionTitle}>{editId ? 'EDIT SERIES' : 'ADD NEW SERIES'}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 14 }}>
-            <div style={{ gridColumn: '1/-1' }}>
-              <label style={labelStyle}>TITLE *</label>
-              <input value={form.title} onChange={e => set('title', e.target.value)} style={inputStyle} placeholder="SERIES TITLE" />
-            </div>
-            <div style={{ gridColumn: '1/-1' }}>
-              <label style={labelStyle}>DESCRIPTION</label>
-              <textarea value={form.description} onChange={e => set('description', e.target.value)} style={{ ...inputStyle, height: 80, resize: 'vertical' }} placeholder="SERIES SYNOPSIS" />
-            </div>
+            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>TITLE *</label><input style={inputStyle} placeholder="SERIES TITLE" value={form.title} onChange={e => set('title', e.target.value.toUpperCase())} /></div>
+            <div style={{ gridColumn: '1/-1' }}><label style={labelStyle}>DESCRIPTION</label><textarea style={{ ...inputStyle, height: 80, resize: 'vertical' }} placeholder="DESCRIPTION..." value={form.description} onChange={e => set('description', e.target.value)} /></div>
+            <div><label style={labelStyle}>CATEGORY</label><select style={inputStyle} value={form.category} onChange={e => set('category', e.target.value)}>{CATEGORIES.map(c => <option key={c} value={c}>{c.toUpperCase()}</option>)}</select></div>
+            <div><label style={labelStyle}>STATUS</label><select style={inputStyle} value={form.status} onChange={e => set('status', e.target.value)}>{STATUS.map(s => <option key={s} value={s}>{s.toUpperCase()}</option>)}</select></div>
+            <div><label style={labelStyle}>BADGE</label><select style={inputStyle} value={form.badge} onChange={e => set('badge', e.target.value)}>{BADGES.map(b => <option key={b} value={b}>{b}</option>)}</select></div>
+            <div><label style={labelStyle}>TOTAL EPISODES</label><input style={inputStyle} placeholder="24" value={form.totalEpisodes} onChange={e => set('totalEpisodes', e.target.value)} /></div>
+            <div><label style={labelStyle}>YEAR</label><input style={inputStyle} placeholder="2025" value={form.year} onChange={e => set('year', e.target.value)} /></div>
+            <div><label style={labelStyle}>RATING</label><input style={inputStyle} placeholder="9.2" value={form.rating} onChange={e => set('rating', e.target.value)} /></div>
+            <div><label style={labelStyle}>TAGS</label><input style={inputStyle} placeholder="ROMANCE, THRILLER" value={form.tags} onChange={e => set('tags', e.target.value.toUpperCase())} /></div>
             <div>
-              <label style={labelStyle}>CATEGORY *</label>
-              <select value={form.category} onChange={e => set('category', e.target.value)} style={inputStyle}>
-                {categories.map(c => <option key={c.id} value={c.id}>{c.label}</option>)}
-              </select>
+              <label style={labelStyle}>THUMBNAIL</label>
+              <div style={{ display: 'flex', gap: 8 }}>
+                <input style={{ ...inputStyle, flex: 1 }} placeholder="HTTPS://... OR UPLOAD" value={form.thumbnail} onChange={e => set('thumbnail', e.target.value)} />
+                <button onClick={() => thumbRef.current?.click()} style={uploadBtn}><UploadIcon size={13} /></button>
+                <input ref={thumbRef} type="file" accept="image/*" hidden onChange={e => e.target.files?.[0] && handleThumb(e.target.files[0])} />
+              </div>
+              {thumbPct > 0 && <ProgressBar pct={thumbPct} />}
             </div>
-            <div>
-              <label style={labelStyle}>STATUS</label>
-              <select value={form.status} onChange={e => set('status', e.target.value)} style={inputStyle}>
-                <option value="ongoing">ONGOING</option>
-                <option value="completed">COMPLETED</option>
-                <option value="upcoming">UPCOMING</option>
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>BADGE</label>
-              <select value={form.badge} onChange={e => set('badge', e.target.value)} style={inputStyle}>
-                {['FREE NOW', 'EXCLUSIVE', 'PREMIERE', 'VIP', 'SVIP', 'HOT CHART TOP', 'NEW ARRIVAL'].map(b => <option key={b}>{b}</option>)}
-              </select>
-            </div>
-            <div>
-              <label style={labelStyle}>TOTAL EPISODES</label>
-              <input value={form.totalEpisodes} onChange={e => set('totalEpisodes', e.target.value)} style={inputStyle} placeholder="36" />
-            </div>
-            <div>
-              <label style={labelStyle}>RELEASE YEAR</label>
-              <input value={form.year} onChange={e => set('year', e.target.value)} style={inputStyle} placeholder="2025" />
-            </div>
-            <div>
-              <label style={labelStyle}>RATING (0-10)</label>
-              <input value={form.rating} onChange={e => set('rating', e.target.value)} style={inputStyle} placeholder="8.9" />
-            </div>
-            <div>
-              <label style={labelStyle}>TAGS</label>
-              <input value={form.tags} onChange={e => set('tags', e.target.value)} style={inputStyle} placeholder="ROMANCE, ANCIENT" />
-            </div>
-            <div style={{ gridColumn: '1/-1' }}>
-              <label style={labelStyle}>THUMBNAIL URL</label>
-              <input value={form.thumbnail} onChange={e => set('thumbnail', e.target.value)} style={inputStyle} placeholder="https://..." />
-            </div>
-            <div>
-              <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: '#888', fontSize: 10, letterSpacing: 1, cursor: 'pointer' }}>
-                <input type="checkbox" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} />
-                FEATURE ON HOMEPAGE
-              </label>
+            <div style={{ gridColumn: '1/-1', display: 'flex', alignItems: 'center', gap: 10 }}>
+              <input type="checkbox" id="feat" checked={form.isFeatured} onChange={e => set('isFeatured', e.target.checked)} />
+              <label htmlFor="feat" style={{ color: '#888', fontSize: 11, letterSpacing: 1, cursor: 'pointer' }}>FEATURE ON HOMEPAGE BANNER</label>
             </div>
           </div>
           <div style={{ display: 'flex', gap: 10, marginTop: 20 }}>
-            <button onClick={handleSubmit} style={btnStyle('#e50914')}>{editId ? 'SAVE CHANGES' : 'ADD SERIES'}</button>
-            <button onClick={() => { setShowForm(false); setEditId(null); }} style={btnStyle('rgba(255,255,255,0.08)')}>CANCEL</button>
+            <button onClick={save} disabled={saving || !form.title} style={btnStyle('#e50914')}>{saving ? 'SAVING...' : (editId ? 'UPDATE SERIES' : 'ADD SERIES')}</button>
+            <button onClick={() => { setShowForm(false); setEditId(null); setForm(empty); }} style={btnStyle('#333')}>CANCEL</button>
           </div>
         </div>
       )}
 
-      {filtered.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 0', color: '#444', fontSize: 12, letterSpacing: 1 }}>
-          {series.length === 0 ? 'NO SERIES ADDED YET' : 'NO RESULTS FOUND'}
-        </div>
-      ) : (
-        <div style={{ background: '#16161a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, overflow: 'hidden' }}>
+      <div style={{ marginBottom: 16 }}>
+        <input style={{ ...inputStyle, maxWidth: 320 }} placeholder="SEARCH SERIES..." value={search} onChange={e => setSearch(e.target.value)} />
+      </div>
+
+      <div style={cardStyle}>
+        {filtered.length === 0 ? (
+          <div style={{ color: '#333', fontSize: 11, letterSpacing: 1, padding: '24px 0', textAlign: 'center' }}>NO SERIES FOUND. ADD YOUR FIRST SERIES ABOVE.</div>
+        ) : (
           <table style={{ width: '100%', borderCollapse: 'collapse' }}>
-            <thead>
-              <tr style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-                {['THUMBNAIL', 'TITLE', 'CATEGORY', 'EPS', 'STATUS', 'BADGE', 'VIEWS', 'ACTIONS'].map(h => (
-                  <th key={h} style={{ textAlign: 'left', color: '#444', fontSize: 9, letterSpacing: 1.5, padding: '14px 16px', fontWeight: 700 }}>{h}</th>
-                ))}
-              </tr>
-            </thead>
+            <thead><tr>{['THUMBNAIL','TITLE','CATEGORY','STATUS','EPS','BADGE','ACTIONS'].map(h => <th key={h} style={thStyle}>{h}</th>)}</tr></thead>
             <tbody>
               {filtered.map(s => (
-                <tr key={s.id} style={{ borderBottom: '1px solid rgba(255,255,255,0.04)' }}>
-                  <td style={{ padding: '10px 16px' }}>
-                    <div style={{ width: 48, height: 32, background: '#2a2a2a', borderRadius: 4, overflow: 'hidden' }}>
-                      {s.thumbnail && <img src={s.thumbnail} alt="" style={{ width: '100%', height: '100%', objectFit: 'cover' }} />}
-                    </div>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#ccc', fontSize: 11 }}>{s.title}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ background: 'rgba(74,158,255,0.1)', color: '#4a9eff', padding: '3px 8px', borderRadius: 4, fontSize: 9, letterSpacing: 1 }}>
-                      {categories.find(c => c.id === s.category)?.label || s.category.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#888', fontSize: 11 }}>{s.totalEpisodes || '—'}</td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ background: s.status === 'completed' ? 'rgba(34,197,94,0.1)' : s.status === 'upcoming' ? 'rgba(245,166,35,0.1)' : 'rgba(168,85,247,0.1)', color: s.status === 'completed' ? '#22c55e' : s.status === 'upcoming' ? '#f5a623' : '#a855f7', padding: '3px 8px', borderRadius: 4, fontSize: 9, letterSpacing: 1 }}>
-                      {s.status.toUpperCase()}
-                    </span>
-                  </td>
-                  <td style={{ padding: '10px 16px' }}>
-                    <span style={{ background: 'rgba(229,9,20,0.1)', color: '#e50914', padding: '3px 8px', borderRadius: 4, fontSize: 9 }}>{s.badge}</span>
-                  </td>
-                  <td style={{ padding: '10px 16px', color: '#888', fontSize: 11 }}>{s.views.toLocaleString()}</td>
-                  <td style={{ padding: '10px 16px' }}>
+                <tr key={s.id}>
+                  <td style={tdStyle}>{s.thumbnail ? <img src={s.thumbnail} style={{ width: 56, height: 36, objectFit: 'cover', borderRadius: 4 }} alt="" /> : <div style={{ width: 56, height: 36, background: '#222', borderRadius: 4 }} />}</td>
+                  <td style={{ ...tdStyle, color: '#fff', fontWeight: 700, maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.title}</td>
+                  <td style={tdStyle}><span style={badge('#4a9eff')}>{s.category.toUpperCase()}</span></td>
+                  <td style={tdStyle}><span style={badge(s.status==='completed'?'#22c55e':s.status==='upcoming'?'#f5a623':'#4a9eff')}>{(s.status||'ONGOING').toUpperCase()}</span></td>
+                  <td style={tdStyle}>{s.totalEpisodes||'—'}</td>
+                  <td style={tdStyle}><span style={badge('#666')}>{s.badge}</span></td>
+                  <td style={tdStyle}>
                     <div style={{ display: 'flex', gap: 8 }}>
-                      <button onClick={() => handleEdit(s)} style={{ background: 'rgba(74,158,255,0.1)', border: '1px solid rgba(74,158,255,0.2)', color: '#4a9eff', padding: '5px 10px', borderRadius: 6, fontSize: 10, cursor: 'pointer', letterSpacing: 0.8 }}>EDIT</button>
-                      <button onClick={() => setConfirm(s.id)} style={{ background: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.2)', color: '#e50914', padding: '5px 10px', borderRadius: 6, fontSize: 10, cursor: 'pointer', letterSpacing: 0.8 }}>DELETE</button>
+                      <button onClick={() => edit(s)} style={iconBtn('#4a9eff')}><EditIcon size={13} /></button>
+                      <button onClick={() => del(s.id!)} style={iconBtn('#e50914')}><TrashIcon size={13} /></button>
                     </div>
                   </td>
                 </tr>
               ))}
             </tbody>
           </table>
-        </div>
-      )}
-
-      {confirm && (
-        <div style={{ position: 'fixed', inset: 0, zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
-          <div onClick={() => setConfirm(null)} style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.7)' }} />
-          <div style={{ position: 'relative', background: '#1a1a1a', borderRadius: 14, padding: 28, width: 360, border: '1px solid rgba(255,255,255,0.1)' }}>
-            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, marginBottom: 10 }}>DELETE SERIES?</div>
-            <div style={{ color: '#666', fontSize: 11, marginBottom: 20 }}>THIS WILL ALSO REMOVE ALL ASSOCIATED EPISODES.</div>
-            <div style={{ display: 'flex', gap: 10 }}>
-              <button onClick={() => handleDelete(confirm)} style={btnStyle('#e50914')}>DELETE</button>
-              <button onClick={() => setConfirm(null)} style={btnStyle('rgba(255,255,255,0.08)')}>CANCEL</button>
-            </div>
-          </div>
-        </div>
-      )}
+        )}
+      </div>
     </div>
   );
 }
 
-const btnStyle = (bg: string): React.CSSProperties => ({ background: bg, border: 'none', borderRadius: 8, color: '#fff', padding: '10px 18px', fontSize: 11, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', fontFamily: 'Arial, sans-serif' });
-const inputStyle: React.CSSProperties = { width: '100%', padding: '11px 14px', background: '#0d0d0f', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 11, outline: 'none', boxSizing: 'border-box', letterSpacing: 0.8 };
-const labelStyle: React.CSSProperties = { display: 'block', color: '#555', fontSize: 9, letterSpacing: 1.5, marginBottom: 6, fontWeight: 700 };
+function ProgressBar({ pct }: { pct: number }) {
+  return <div style={{ marginTop: 6, height: 4, background: '#222', borderRadius: 2 }}><div style={{ height: '100%', width: `${pct}%`, background: '#e50914', borderRadius: 2, transition: 'width 0.2s' }} /></div>;
+}
+
+const cardStyle: React.CSSProperties = { background: '#16161a', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 14, padding: 24, marginBottom: 20 };
+const sectionTitle: React.CSSProperties = { color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: 1, margin: '0 0 18px' };
+const labelStyle: React.CSSProperties = { display: 'block', color: '#444', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, marginBottom: 6 };
+const inputStyle: React.CSSProperties = { width: '100%', padding: '10px 12px', background: '#111', border: '1px solid rgba(255,255,255,0.08)', borderRadius: 8, color: '#fff', fontFamily: 'Arial, sans-serif', fontSize: 11, letterSpacing: 0.5, outline: 'none', boxSizing: 'border-box' };
+const thStyle: React.CSSProperties = { color: '#333', fontSize: 10, fontWeight: 700, letterSpacing: 1.5, textAlign: 'left', padding: '0 0 12px', borderBottom: '1px solid rgba(255,255,255,0.04)' };
+const tdStyle: React.CSSProperties = { padding: '12px 0', borderBottom: '1px solid rgba(255,255,255,0.03)', color: '#888', fontSize: 11, paddingRight: 12 };
+const btnStyle = (bg: string): React.CSSProperties => ({ display: 'flex', alignItems: 'center', gap: 6, background: bg, border: 'none', borderRadius: 8, color: '#fff', padding: '9px 18px', fontSize: 11, fontWeight: 700, letterSpacing: 1, cursor: 'pointer', fontFamily: 'Arial, sans-serif' });
+const uploadBtn: React.CSSProperties = { background: '#222', border: '1px solid rgba(255,255,255,0.1)', borderRadius: 8, color: '#888', padding: '10px 12px', cursor: 'pointer', display: 'flex', alignItems: 'center', flexShrink: 0 };
+const iconBtn = (c: string): React.CSSProperties => ({ background: `${c}18`, border: 'none', borderRadius: 6, color: c, padding: '6px', cursor: 'pointer', display: 'flex', alignItems: 'center' });
+const badge = (c: string): React.CSSProperties => ({ background: `${c}18`, color: c, fontSize: 9, fontWeight: 700, letterSpacing: 1, padding: '2px 7px', borderRadius: 4 });

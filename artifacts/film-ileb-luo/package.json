@@ -73,5 +73,9 @@
     "vite": "catalog:",
     "wouter": "^3.3.5",
     "zod": "catalog:"
+  },
+  "dependencies": {
+    "@mux/mux-player-react": "^3.13.0",
+    "firebase": "^12.12.1"
   }
 }

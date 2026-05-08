@@ -1,251 +1,203 @@
-import { useState } from 'react';
-import { useParams, useLocation, Link } from 'wouter';
-import VideoCard from '../components/VideoCard';
-import { getPlayShow } from '../data/content';
+import { useState, useEffect } from 'react';
+import { useParams, Link } from 'wouter';
+import { doc, getDoc, collection, query, where, orderBy, getDocs, updateDoc, increment } from 'firebase/firestore';
+import { db } from '../lib/firebase';
+import { ContentDoc, EpisodeDoc } from '../lib/db';
+import { useApp } from '../context/AppContext';
+import MuxPlayer from '@mux/mux-player-react';
 
 export default function PlayPage() {
   const { id } = useParams<{ id: string }>();
-  const [, navigate] = useLocation();
-  const show = getPlayShow(id || '1');
-  const [activeTab, setActiveTab] = useState<'video' | 'discuss'>('video');
+  const { user, openVip } = useApp();
+  const [content, setContent] = useState<ContentDoc | null>(null);
+  const [episodes, setEpisodes] = useState<EpisodeDoc[]>([]);
+  const [activeEp, setActiveEp] = useState<EpisodeDoc | null>(null);
+  const [loading, setLoading] = useState(true);
   const [isLiked, setIsLiked] = useState(false);
-  const [activeCast, setActiveCast] = useState(0);
+  const [tab, setTab] = useState<'video'|'discuss'>('video');
+
+  useEffect(() => {
+    if (!id) return;
+    const load = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'content', id));
+        if (snap.exists()) {
+          const c = { id: snap.id, ...snap.data() } as ContentDoc;
+          setContent(c);
+          // increment view count
+          updateDoc(doc(db, 'content', id), { views: increment(1) }).catch(() => {});
+          if (c.type === 'series') {
+            const epSnap = await getDocs(query(collection(db, 'episodes'), where('seriesId', '==', id), orderBy('episodeNumber', 'asc')));
+            const eps = epSnap.docs.map(d => ({ id: d.id, ...d.data() } as EpisodeDoc));
+            setEpisodes(eps);
+            if (eps.length) setActiveEp(eps[0]);
+          }
+        }
+      } catch (e) { console.error(e); }
+      finally { setLoading(false); }
+    };
+    load();
+  }, [id]);
+
+  const currentVideo = activeEp?.videoUrl || content?.videoUrl || '';
+  const currentTitle = activeEp ? `EP ${activeEp.episodeNumber}: ${activeEp.title}` : content?.title || '';
+  const isVipRequired = activeEp ? !activeEp.isFree : false;
+  const canWatch = !isVipRequired || user?.isVip;
+
+  const renderPlayer = () => {
+    if (!currentVideo) {
+      return (
+        <div style={{ width: '100%', aspectRatio: '16/9', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 12 }}>
+          <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round"><path d="M5 3l14 9-14 9V3z"/></svg>
+          <span style={{ color: '#333', fontSize: 11, letterSpacing: 1, fontFamily: 'Arial, sans-serif' }}>NO VIDEO SOURCE</span>
+        </div>
+      );
+    }
+    if (!canWatch) {
+      return (
+        <div style={{ width: '100%', aspectRatio: '16/9', background: '#0a0a0a', display: 'flex', alignItems: 'center', justifyContent: 'center', flexDirection: 'column', gap: 16 }}>
+          {content?.thumbnail && <img src={content.thumbnail} style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', objectFit: 'cover', opacity: 0.15 }} alt="" />}
+          <div style={{ position: 'relative', textAlign: 'center' }}>
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f5a623" strokeWidth="2" strokeLinecap="round" style={{ marginBottom: 10 }}><path d="M2 19h20M3 9l4 5 5-8 5 8 4-5v10H3z"/></svg>
+            <div style={{ color: '#fff', fontSize: 14, fontWeight: 700, letterSpacing: 1, fontFamily: 'Arial, sans-serif', marginBottom: 6 }}>VIP CONTENT</div>
+            <div style={{ color: '#888', fontSize: 11, letterSpacing: 0.8, fontFamily: 'Arial, sans-serif', marginBottom: 16 }}>SUBSCRIBE TO WATCH THIS EPISODE</div>
+            <button onClick={openVip} style={{ background: 'linear-gradient(135deg,#f5a623,#e08a00)', border: 'none', borderRadius: 8, color: '#fff', padding: '10px 24px', fontSize: 12, fontWeight: 700, letterSpacing: 1.5, cursor: 'pointer', fontFamily: 'Arial, sans-serif' }}>
+              GET VIP
+            </button>
+          </div>
+        </div>
+      );
+    }
+    // Determine if it's a Mux playback ID (no protocol) or a direct URL
+    const isMuxId = currentVideo && !currentVideo.startsWith('http') && !currentVideo.startsWith('//');
+    return (
+      <MuxPlayer
+        style={{ width: '100%', aspectRatio: '16/9', background: '#000' }}
+        {...(isMuxId ? { playbackId: currentVideo } : { src: currentVideo })}
+        poster={content?.thumbnail || undefined}
+        title={currentTitle}
+        accentColor="#e50914"
+        autoPlay={false}
+        preload="metadata"
+      />
+    );
+  };
+
+  if (loading) {
+    return (
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', color: '#444', fontFamily: 'Arial, sans-serif', fontSize: 12, letterSpacing: 1 }}>
+        LOADING...
+      </div>
+    );
+  }
+
+  if (!content) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', gap: 16, fontFamily: 'Arial, sans-serif' }}>
+        <div style={{ fontSize: 48, color: '#222' }}>404</div>
+        <div style={{ color: '#555', fontSize: 12, letterSpacing: 1 }}>CONTENT NOT FOUND</div>
+        <Link href="/" style={{ color: '#e50914', fontSize: 11, letterSpacing: 1, textDecoration: 'none' }}>BACK TO HOME</Link>
+      </div>
+    );
+  }
 
   return (
     <div style={{ background: '#0d0d0d', minHeight: '100vh', color: '#e0e0e0', fontFamily: 'Arial, sans-serif' }}>
       {/* Breadcrumb */}
       <div style={{ padding: '8px 24px', fontSize: 11, color: '#555', display: 'flex', gap: 6, alignItems: 'center' }}>
-        <Link href="/"><span style={{ color: '#555', cursor: 'pointer' }} onMouseEnter={e => (e.target as HTMLElement).style.color='#aaa'} onMouseLeave={e => (e.target as HTMLElement).style.color='#555'}>HOME</span></Link>
+        <Link href="/"><span style={{ color: '#555', cursor: 'pointer' }}>HOME</span></Link>
         <span>›</span>
-        <Link href="/drama"><span style={{ color: '#555', cursor: 'pointer' }} onMouseEnter={e => (e.target as HTMLElement).style.color='#aaa'} onMouseLeave={e => (e.target as HTMLElement).style.color='#555'}>TV DRAMA</span></Link>
+        <Link href={`/${content.category}`}><span style={{ color: '#555', cursor: 'pointer', textTransform: 'uppercase' }}>{content.category}</span></Link>
         <span>›</span>
-        <span style={{ color: '#999' }}>{show.title}</span>
+        <span style={{ color: '#999' }}>{content.title}</span>
       </div>
 
-      {/* CENTER CONTAINER — Player + Right Panel */}
-      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start', padding: '0 0 0 0' }}>
+      <div style={{ display: 'flex', gap: 0, alignItems: 'flex-start' }}>
         {/* Player Area */}
         <div style={{ flex: 1, minWidth: 0 }}>
-          {/* Video Player */}
-          <div style={{
-            position: 'relative',
-            background: '#000',
-            aspectRatio: '16/9',
-            width: '100%',
-            maxHeight: 520,
-            overflow: 'hidden',
-          }}>
-            <video
-              src={show.videoUrl}
-              poster={show.posterUrl}
-              controls
-              style={{ width: '100%', height: '100%', objectFit: 'contain', background: '#000' }}
-              onError={(e) => {
-                const v = e.target as HTMLVideoElement;
-                v.poster = show.posterUrl;
-              }}
-            />
-            {/* Top overlay bar */}
-            <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 14px', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none' }}>
-              <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>{show.title}</span>
-              <span style={{ background: '#ff1a1a', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 2 }}>{show.badgeText}</span>
-            </div>
-          </div>
-
-          {/* Below player: episode selector mock */}
-          <div style={{ background: '#111', borderBottom: '1px solid #1e1e1e', padding: '10px 16px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
-            <span style={{ fontSize: 12, color: '#666', flexShrink: 0, paddingTop: 4 }}>EPISODES:</span>
-            {Array.from({ length: Math.min(show.totalEps, 16) }, (_, i) => i + 1).map(ep => (
-              <button
-                key={ep}
-                style={{
-                  minWidth: 36, height: 28, border: ep <= show.completedEps ? '1px solid #ff1a1a' : '1px solid #2a2a2a',
-                  background: ep === 1 ? '#ff1a1a' : '#181818',
-                  color: ep === 1 ? '#fff' : ep <= show.completedEps ? '#ff8888' : '#666',
-                  borderRadius: 3, fontSize: 11, cursor: 'pointer', fontFamily: 'Arial, sans-serif',
-                  flexShrink: 0,
-                }}
-              >
-                {ep < 10 ? `0${ep}` : ep}
-              </button>
-            ))}
-            {show.totalEps > 16 && (
-              <button style={{ minWidth: 48, height: 28, border: '1px solid #2a2a2a', background: '#181818', color: '#666', borderRadius: 3, fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>
-                MORE...
-              </button>
+          <div style={{ position: 'relative', background: '#000', width: '100%', maxHeight: 540, overflow: 'hidden' }}>
+            {renderPlayer()}
+            {canWatch && currentVideo && (
+              <div style={{ position: 'absolute', top: 0, left: 0, right: 0, padding: '10px 14px', background: 'linear-gradient(to bottom, rgba(0,0,0,0.8), transparent)', display: 'flex', alignItems: 'center', gap: 12, pointerEvents: 'none' }}>
+                <span style={{ color: '#fff', fontSize: 13, fontWeight: 700, letterSpacing: '0.05em' }}>{content.title}</span>
+                {content.badge && <span style={{ background: '#e50914', color: '#fff', fontSize: 9, fontWeight: 700, padding: '2px 5px', borderRadius: 2 }}>{content.badge}</span>}
+              </div>
             )}
           </div>
+
+          {/* Episode selector for series */}
+          {content.type === 'series' && episodes.length > 0 && (
+            <div style={{ background: '#111', borderBottom: '1px solid #1e1e1e', padding: '10px 16px', display: 'flex', gap: 8, overflowX: 'auto', scrollbarWidth: 'none' }}>
+              <span style={{ fontSize: 12, color: '#666', flexShrink: 0, paddingTop: 4 }}>EPISODES:</span>
+              {episodes.map(ep => (
+                <button
+                  key={ep.id}
+                  onClick={() => setActiveEp(ep)}
+                  style={{
+                    minWidth: 36, height: 28,
+                    border: activeEp?.id === ep.id ? '1px solid #e50914' : '1px solid #2a2a2a',
+                    background: activeEp?.id === ep.id ? '#e50914' : '#181818',
+                    color: activeEp?.id === ep.id ? '#fff' : '#666',
+                    borderRadius: 3, fontSize: 11, cursor: 'pointer', fontFamily: 'Arial, sans-serif', flexShrink: 0,
+                  }}>
+                  {ep.episodeNumber < 10 ? `0${ep.episodeNumber}` : ep.episodeNumber}
+                  {!ep.isFree && <span style={{ fontSize: 7, marginLeft: 2, color: '#f5a623' }}>V</span>}
+                </button>
+              ))}
+            </div>
+          )}
         </div>
 
         {/* Right Panel */}
         <div style={{ width: 320, flexShrink: 0, background: '#0f0f0f', borderLeft: '1px solid #1a1a1a', minHeight: 400 }}>
-          {/* Tabs */}
           <div style={{ display: 'flex', borderBottom: '1px solid #1e1e1e' }}>
-            {(['video', 'discuss'] as const).map(tab => (
-              <button
-                key={tab}
-                onClick={() => setActiveTab(tab)}
-                style={{
-                  flex: 1, padding: '12px 0', background: 'transparent', border: 'none',
-                  borderBottom: activeTab === tab ? '2px solid #ff1a1a' : '2px solid transparent',
-                  color: activeTab === tab ? '#fff' : '#666',
-                  fontSize: 12, fontWeight: activeTab === tab ? 700 : 400,
-                  cursor: 'pointer', fontFamily: 'Arial, sans-serif', letterSpacing: '0.05em',
-                }}
-              >
-                {tab === 'video' ? 'VIDEO' : 'DISCUSSION'}
+            {(['video','discuss'] as const).map(t => (
+              <button key={t} onClick={() => setTab(t)} style={{ flex: 1, padding: '12px 0', background: 'transparent', border: 'none', borderBottom: tab === t ? '2px solid #e50914' : '2px solid transparent', color: tab === t ? '#fff' : '#666', fontSize: 12, fontWeight: tab === t ? 700 : 400, cursor: 'pointer', fontFamily: 'Arial, sans-serif', letterSpacing: '0.05em' }}>
+                {t === 'video' ? 'INFO' : 'DISCUSSION'}
               </button>
             ))}
           </div>
 
-          {activeTab === 'video' ? (
+          {tab === 'video' ? (
             <div style={{ overflowY: 'auto', maxHeight: 700, scrollbarWidth: 'thin', scrollbarColor: '#2a2a2a #111' }}>
-              {/* Show Info */}
               <div style={{ padding: '14px 14px 10px' }}>
-                <div style={{ fontSize: 16, fontWeight: 800, color: '#fff', marginBottom: 6, letterSpacing: '0.03em' }}>{show.title}</div>
+                <div style={{ fontSize: 15, fontWeight: 800, color: '#fff', marginBottom: 6 }}>{content.title}</div>
                 <div style={{ display: 'flex', gap: 8, alignItems: 'center', flexWrap: 'wrap', marginBottom: 8 }}>
-                  <span style={{ color: '#ff4444', fontSize: 13, fontWeight: 700 }}>{show.heat.toLocaleString()}</span>
-                  <span style={{ color: '#aaa', fontSize: 11 }}>{show.rank}</span>
+                  {content.year && <span style={{ color: '#666', fontSize: 11 }}>{content.year}</span>}
+                  {content.rating && <span style={{ color: '#f5a623', fontSize: 11, fontWeight: 700 }}>{content.rating}</span>}
+                  {content.duration && <span style={{ color: '#555', fontSize: 10 }}>{content.duration}</span>}
                 </div>
-                <div style={{ display: 'flex', gap: 6, marginBottom: 10 }}>
-                  {show.tags.map(t => (
-                    <span key={t} style={{ background: '#1e1e1e', color: '#888', fontSize: 10, padding: '2px 7px', borderRadius: 2, border: '1px solid #2a2a2a' }}>{t}</span>
-                  ))}
-                </div>
-                <div style={{ fontSize: 11, color: '#777', lineHeight: 1.6, marginBottom: 12 }}>{show.desc}</div>
+                {content.tags && (
+                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap', marginBottom: 10 }}>
+                    {content.tags.split(',').map(t => (
+                      <span key={t} style={{ background: '#1e1e1e', color: '#888', fontSize: 10, padding: '2px 7px', borderRadius: 2, border: '1px solid #2a2a2a' }}>{t.trim()}</span>
+                    ))}
+                  </div>
+                )}
+                {content.description && <div style={{ fontSize: 11, color: '#777', lineHeight: 1.6, marginBottom: 12 }}>{content.description}</div>}
 
-                {/* Action buttons */}
                 <div style={{ display: 'flex', gap: 16, paddingBottom: 12, borderBottom: '1px solid #1e1e1e' }}>
-                  {[
-                    { icon: '⬇', label: 'DOWNLOAD', disabled: true },
-                    { icon: '↗', label: 'SHARE', disabled: false },
-                    { icon: isLiked ? '♥' : '♡', label: 'LIKE', disabled: false, onClick: () => setIsLiked(!isLiked), color: isLiked ? '#ff4444' : undefined },
-                  ].map(btn => (
-                    <button
-                      key={btn.label}
-                      onClick={btn.onClick}
-                      disabled={btn.disabled}
-                      style={{
-                        background: 'transparent', border: 'none',
-                        color: btn.disabled ? '#3a3a3a' : btn.color || '#888',
-                        cursor: btn.disabled ? 'not-allowed' : 'pointer',
-                        display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3,
-                        fontSize: 18, fontFamily: 'Arial, sans-serif',
-                      }}
-                    >
-                      <span>{btn.icon}</span>
-                      <span style={{ fontSize: 9, color: btn.disabled ? '#3a3a3a' : '#666' }}>{btn.label}</span>
-                    </button>
-                  ))}
-                </div>
-              </div>
-
-              {/* Surrounding Videos */}
-              <div style={{ padding: '10px 14px' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: '#ccc', marginBottom: 10, letterSpacing: '0.05em' }}>RELATED VIDEOS</div>
-                <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-                  {show.relatedVideos.map((rv) => (
-                    <a
-                      key={rv.id}
-                      href="#"
-                      onClick={e => { e.preventDefault(); navigate('/play/1'); }}
-                      style={{ display: 'flex', gap: 8, textDecoration: 'none', color: 'inherit' }}
-                    >
-                      <div style={{ position: 'relative', width: 96, height: 54, flexShrink: 0, borderRadius: 3, overflow: 'hidden', background: '#1a1a1a' }}>
-                        <img
-                          src={`${rv.thumbnail}?x-oss-process=image/resize,w_192/interlace,1/quality,Q_70`}
-                          alt=""
-                          style={{ width: '100%', height: '100%', objectFit: 'cover' }}
-                          onError={(e) => { (e.target as HTMLImageElement).style.opacity = '0.3'; }}
-                        />
-                        {rv.badge && (
-                          <span style={{ position: 'absolute', top: 3, left: 3, background: '#2255ff', color: '#fff', fontSize: 8, padding: '1px 4px', borderRadius: 2 }}>{rv.badge}</span>
-                        )}
-                        <span style={{ position: 'absolute', bottom: 3, right: 4, color: '#ddd', fontSize: 9, background: 'rgba(0,0,0,0.6)', padding: '1px 3px', borderRadius: 2 }}>{rv.duration}</span>
-                      </div>
-                      <div style={{ flex: 1, minWidth: 0 }}>
-                        <div style={{ fontSize: 11, color: '#ccc', lineHeight: 1.4, overflow: 'hidden', display: '-webkit-box', WebkitLineClamp: 2, WebkitBoxOrient: 'vertical' } as React.CSSProperties}>{rv.title}</div>
-                      </div>
-                    </a>
-                  ))}
+                  <button onClick={() => setIsLiked(!isLiked)} style={{ background: 'transparent', border: 'none', color: isLiked ? '#e50914' : '#888', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, fontSize: 18 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill={isLiked ? '#e50914' : 'none'} stroke={isLiked ? '#e50914' : '#888'} strokeWidth="2" strokeLinecap="round"><path d="M20.84 4.61a5.5 5.5 0 0 0-7.78 0L12 5.67l-1.06-1.06a5.5 5.5 0 0 0-7.78 7.78l1.06 1.06L12 21.23l7.78-7.78 1.06-1.06a5.5 5.5 0 0 0 0-7.78z"/></svg>
+                    <span style={{ fontSize: 9, color: isLiked ? '#e50914' : '#666' }}>LIKE</span>
+                  </button>
+                  <button onClick={() => navigator.share?.({ title: content.title, url: window.location.href }).catch(()=>{})} style={{ background: 'transparent', border: 'none', color: '#888', cursor: 'pointer', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 3, fontSize: 18 }}>
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><path d="M4 12v8a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>
+                    <span style={{ fontSize: 9, color: '#666' }}>SHARE</span>
+                  </button>
                 </div>
               </div>
             </div>
           ) : (
             <div style={{ padding: 20, textAlign: 'center' }}>
               <div style={{ marginBottom: 16 }}>
-                <img src="https://img.alicdn.com/imgextra/i3/O1CN01LamlXK1zSbv0PI4jQ_!!6000000006713-2-tps-600-600.png" alt="" style={{ width: 80, opacity: 0.3 }} />
-                <div style={{ fontSize: 12, color: '#555', marginTop: 8 }}>NO COMMENTS YET</div>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="#333" strokeWidth="1.5" strokeLinecap="round" style={{ marginBottom: 8 }}><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+                <div style={{ fontSize: 12, color: '#555', marginTop: 4 }}>NO COMMENTS YET</div>
               </div>
-              <textarea
-                placeholder="SHARE YOUR THOUGHTS..."
-                style={{
-                  width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a',
-                  borderRadius: 4, padding: 10, color: '#ccc', fontSize: 12,
-                  resize: 'none', height: 80, fontFamily: 'Arial, sans-serif',
-                  textTransform: 'uppercase',
-                }}
-              />
-              <button style={{
-                marginTop: 8, padding: '6px 20px', background: '#ff1a1a', color: '#fff',
-                border: 'none', borderRadius: 3, cursor: 'pointer', fontSize: 11,
-                fontFamily: 'Arial, sans-serif', letterSpacing: '0.05em',
-              }}>
-                POST COMMENT
-              </button>
+              <textarea placeholder="SHARE YOUR THOUGHTS..." style={{ width: '100%', background: '#1a1a1a', border: '1px solid #2a2a2a', borderRadius: 4, padding: 10, color: '#ccc', fontSize: 12, resize: 'none', height: 80, fontFamily: 'Arial, sans-serif', textTransform: 'uppercase', outline: 'none', boxSizing: 'border-box' }} />
+              <button style={{ marginTop: 8, padding: '6px 20px', background: '#e50914', color: '#fff', border: 'none', borderRadius: 3, cursor: 'pointer', fontSize: 11, fontFamily: 'Arial, sans-serif', letterSpacing: '0.05em' }}>POST COMMENT</button>
             </div>
           )}
-        </div>
-      </div>
-
-      {/* BOTTOM: Cast tabs + Recommended */}
-      <div style={{ padding: '0 16px 16px', marginTop: 2 }}>
-        {/* Cast tabs */}
-        <div style={{ overflowX: 'auto', scrollbarWidth: 'none' }}>
-          <div style={{ display: 'flex', gap: 0, borderBottom: '1px solid #1e1e1e', marginBottom: 16 }}>
-            <button
-              key="foryou"
-              onClick={() => setActiveCast(0)}
-              style={{
-                padding: '10px 16px', background: 'transparent', border: 'none',
-                borderBottom: activeCast === 0 ? '2px solid #ff1a1a' : '2px solid transparent',
-                color: activeCast === 0 ? '#fff' : '#666',
-                fontSize: 11, fontWeight: activeCast === 0 ? 700 : 400,
-                cursor: 'pointer', fontFamily: 'Arial, sans-serif', whiteSpace: 'nowrap',
-                letterSpacing: '0.05em',
-              }}
-            >
-              FOR YOU
-            </button>
-            {show.cast.map((member, idx) => (
-              <button
-                key={member.id}
-                onClick={() => setActiveCast(idx + 1)}
-                style={{
-                  padding: '10px 12px', background: 'transparent', border: 'none',
-                  borderBottom: activeCast === idx + 1 ? '2px solid #ff1a1a' : '2px solid transparent',
-                  color: activeCast === idx + 1 ? '#fff' : '#666',
-                  fontSize: 11, cursor: 'pointer', fontFamily: 'Arial, sans-serif', whiteSpace: 'nowrap',
-                  display: 'flex', alignItems: 'center', gap: 6,
-                }}
-              >
-                <img
-                  src={member.avatar}
-                  alt={member.name}
-                  style={{ width: 22, height: 22, borderRadius: '50%', objectFit: 'cover' }}
-                  onError={(e) => { (e.target as HTMLImageElement).style.display = 'none'; }}
-                />
-                <span style={{ letterSpacing: '0.03em' }}>{member.name}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-
-        {/* Recommended Cards Grid */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: '12px 8px' }}>
-          {show.recommendedCards.map(card => (
-            <VideoCard key={card.id} card={card} />
-          ))}
         </div>
       </div>
     </div>

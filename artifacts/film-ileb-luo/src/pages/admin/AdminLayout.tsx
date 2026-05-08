@@ -1,36 +1,38 @@
 import { ReactNode, useState } from 'react';
 import { Link, useLocation } from 'wouter';
 import { useApp } from '../../context/AppContext';
+import {
+  DashboardIcon, MovieIcon, SeriesIcon, EpisodeIcon, LiveIcon, UsersIcon,
+  SubscriptionIcon, WalletIcon, SettingsIcon, SEOIcon, BackIcon, LogoutIcon,
+} from '../../components/Icons';
 
 const navSections = [
   {
     title: 'OVERVIEW',
-    items: [
-      { id: 'dashboard', label: 'DASHBOARD', icon: '📊', path: '/admin' },
-    ],
+    items: [{ id: 'dashboard', label: 'DASHBOARD', Icon: DashboardIcon, path: '/admin' }],
   },
   {
     title: 'CONTENT',
     items: [
-      { id: 'movies', label: 'MOVIES', icon: '🎬', path: '/admin/movies' },
-      { id: 'series', label: 'TV SERIES', icon: '📺', path: '/admin/series' },
-      { id: 'episodes', label: 'EPISODES', icon: '🎞', path: '/admin/episodes' },
-      { id: 'live', label: 'LIVE CHANNELS', icon: '📡', path: '/admin/live' },
+      { id: 'movies', label: 'MOVIES', Icon: MovieIcon, path: '/admin/movies' },
+      { id: 'series', label: 'TV SERIES', Icon: SeriesIcon, path: '/admin/series' },
+      { id: 'episodes', label: 'EPISODES', Icon: EpisodeIcon, path: '/admin/episodes' },
+      { id: 'live', label: 'LIVE CHANNELS', Icon: LiveIcon, path: '/admin/live' },
     ],
   },
   {
     title: 'MANAGEMENT',
     items: [
-      { id: 'users', label: 'USERS', icon: '👥', path: '/admin/users' },
-      { id: 'subscriptions', label: 'SUBSCRIPTIONS', icon: '💎', path: '/admin/subscriptions' },
-      { id: 'wallet', label: 'WALLET', icon: '💰', path: '/admin/wallet' },
+      { id: 'users', label: 'USERS', Icon: UsersIcon, path: '/admin/users' },
+      { id: 'subscriptions', label: 'SUBSCRIPTIONS', Icon: SubscriptionIcon, path: '/admin/subscriptions' },
+      { id: 'wallet', label: 'WALLET', Icon: WalletIcon, path: '/admin/wallet' },
     ],
   },
   {
     title: 'CONFIGURATION',
     items: [
-      { id: 'settings', label: 'SETTINGS', icon: '⚙️', path: '/admin/settings' },
-      { id: 'seo', label: 'SEO', icon: '🔍', path: '/admin/seo' },
+      { id: 'settings', label: 'SETTINGS', Icon: SettingsIcon, path: '/admin/settings' },
+      { id: 'seo', label: 'SEO', Icon: SEOIcon, path: '/admin/seo' },
     ],
   },
 ];
@@ -38,45 +40,49 @@ const navSections = [
 export default function AdminLayout({ children }: { children: ReactNode }) {
   const [location] = useLocation();
   const { user, logout } = useApp();
-  const [sideCollapsed, setSideCollapsed] = useState(false);
+  const [collapsed, setCollapsed] = useState(false);
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0d0d0f', fontFamily: 'Arial, sans-serif' }}>
       {/* Sidebar */}
-      <div style={{ width: sideCollapsed ? 64 : 220, background: '#111115', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, transition: 'width 0.2s' }}>
-        {/* Logo */}
-        <div style={{ padding: sideCollapsed ? '20px 12px' : '20px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10 }}>
-          <div style={{ fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 13, fontWeight: 900, letterSpacing: 1, whiteSpace: 'nowrap', overflow: 'hidden' }}>
-            <span style={{ color: '#e50914' }}>FILM</span>
-            {!sideCollapsed && <><span style={{ color: '#e50914' }}> ILEB</span><span style={{ color: '#fff' }}> LUO</span></>}
-          </div>
-          <button onClick={() => setSideCollapsed(!sideCollapsed)} style={{ marginLeft: 'auto', background: 'none', border: 'none', color: '#555', cursor: 'pointer', fontSize: 16, lineHeight: 1, flexShrink: 0 }}>
-            {sideCollapsed ? '→' : '←'}
+      <div style={{ width: collapsed ? 60 : 220, background: '#111115', borderRight: '1px solid rgba(255,255,255,0.06)', display: 'flex', flexDirection: 'column', position: 'fixed', top: 0, left: 0, bottom: 0, zIndex: 100, transition: 'width 0.2s', overflow: 'hidden', flexShrink: 0 }}>
+        {/* Logo + collapse */}
+        <div style={{ padding: collapsed ? '18px 12px' : '18px 20px', borderBottom: '1px solid rgba(255,255,255,0.06)', display: 'flex', alignItems: 'center', gap: 10, flexShrink: 0 }}>
+          {!collapsed && (
+            <div style={{ fontFamily: 'Arial Black, Arial, sans-serif', fontSize: 12, fontWeight: 900, letterSpacing: 1, whiteSpace: 'nowrap' }}>
+              <span style={{ color: '#e50914' }}>FILM ILEB</span>
+              <span style={{ color: '#fff' }}> LUO</span>
+            </div>
+          )}
+          <button onClick={() => setCollapsed(!collapsed)} style={{ marginLeft: collapsed ? 0 : 'auto', background: 'none', border: 'none', color: '#555', cursor: 'pointer', padding: 4, display: 'flex', flexShrink: 0 }}>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+              {collapsed ? <path d="M9 18l6-6-6-6"/> : <path d="M15 18l-6-6 6-6"/>}
+            </svg>
           </button>
         </div>
 
         {/* Admin badge */}
-        {!sideCollapsed && (
-          <div style={{ margin: '12px 16px', background: 'rgba(229,9,20,0.1)', border: '1px solid rgba(229,9,20,0.2)', borderRadius: 8, padding: '8px 12px' }}>
-            <div style={{ color: '#e50914', fontSize: 10, fontWeight: 700, letterSpacing: 1.5 }}>ADMIN PANEL</div>
-            <div style={{ color: '#888', fontSize: 10, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'ADMINISTRATOR'}</div>
+        {!collapsed && (
+          <div style={{ margin: '12px 16px', background: 'rgba(229,9,20,0.08)', border: '1px solid rgba(229,9,20,0.15)', borderRadius: 8, padding: '8px 12px', flexShrink: 0 }}>
+            <div style={{ color: '#e50914', fontSize: 9, fontWeight: 700, letterSpacing: 1.5 }}>ADMIN PANEL</div>
+            <div style={{ color: '#555', fontSize: 10, marginTop: 2, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{user?.name || 'ADMINISTRATOR'}</div>
           </div>
         )}
 
-        {/* Nav */}
-        <div style={{ flex: 1, overflowY: 'auto', padding: '8px 0' }}>
+        {/* Scrollable nav */}
+        <div style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', scrollbarWidth: 'none', padding: '8px 0' }}>
           {navSections.map(sec => (
             <div key={sec.title}>
-              {!sideCollapsed && <div style={{ padding: '12px 20px 4px', color: '#444', fontSize: 9, fontWeight: 700, letterSpacing: 2 }}>{sec.title}</div>}
+              {!collapsed && <div style={{ padding: '10px 20px 4px', color: '#333', fontSize: 9, fontWeight: 700, letterSpacing: 2 }}>{sec.title}</div>}
               {sec.items.map(item => {
                 const isActive = location === item.path || (item.path !== '/admin' && location.startsWith(item.path));
                 return (
                   <Link key={item.id} href={item.path}
-                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: sideCollapsed ? '11px 20px' : '10px 20px', color: isActive ? '#fff' : '#666', background: isActive ? 'rgba(229,9,20,0.12)' : 'transparent', borderLeft: isActive ? '3px solid #e50914' : '3px solid transparent', textDecoration: 'none', fontSize: 11, fontWeight: isActive ? 700 : 400, letterSpacing: 1, transition: 'all 0.15s', whiteSpace: 'nowrap' }}
+                    style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '12px 20px' : '10px 20px', color: isActive ? '#fff' : '#555', background: isActive ? 'rgba(229,9,20,0.1)' : 'transparent', borderLeft: isActive ? '2px solid #e50914' : '2px solid transparent', textDecoration: 'none', fontSize: 11, fontWeight: isActive ? 700 : 400, letterSpacing: 1, transition: 'all 0.15s', whiteSpace: 'nowrap', overflow: 'hidden' }}
                     onMouseEnter={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'rgba(255,255,255,0.04)'; }}
                     onMouseLeave={e => { if (!isActive) (e.currentTarget as HTMLElement).style.background = 'transparent'; }}>
-                    <span style={{ fontSize: 14, flexShrink: 0 }}>{item.icon}</span>
-                    {!sideCollapsed && item.label}
+                    <item.Icon size={15} color={isActive ? '#e50914' : '#444'} />
+                    {!collapsed && item.label}
                   </Link>
                 );
               })}
@@ -84,25 +90,25 @@ export default function AdminLayout({ children }: { children: ReactNode }) {
           ))}
         </div>
 
-        {/* Bottom */}
-        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '12px' }}>
-          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', color: '#555', textDecoration: 'none', fontSize: 11, letterSpacing: 1, borderRadius: 6 }}
+        {/* Bottom actions */}
+        <div style={{ borderTop: '1px solid rgba(255,255,255,0.06)', padding: '8px 0', flexShrink: 0 }}>
+          <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 20px' : '10px 20px', color: '#444', textDecoration: 'none', fontSize: 11, letterSpacing: 1, transition: 'color 0.15s' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#fff')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#555')}>
-            <span>←</span>
-            {!sideCollapsed && 'BACK TO SITE'}
+            onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+            <BackIcon size={15} color="currentColor" />
+            {!collapsed && 'BACK TO SITE'}
           </Link>
-          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '8px 8px', color: '#555', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, letterSpacing: 1, width: '100%' }}
+          <button onClick={logout} style={{ display: 'flex', alignItems: 'center', gap: 10, padding: collapsed ? '10px 20px' : '10px 20px', color: '#444', background: 'none', border: 'none', cursor: 'pointer', fontSize: 11, letterSpacing: 1, width: '100%', transition: 'color 0.15s', fontFamily: 'Arial, sans-serif' }}
             onMouseEnter={e => (e.currentTarget.style.color = '#e50914')}
-            onMouseLeave={e => (e.currentTarget.style.color = '#555')}>
-            <span>⏻</span>
-            {!sideCollapsed && 'LOG OUT'}
+            onMouseLeave={e => (e.currentTarget.style.color = '#444')}>
+            <LogoutIcon size={15} color="currentColor" />
+            {!collapsed && 'LOG OUT'}
           </button>
         </div>
       </div>
 
-      {/* Main */}
-      <div style={{ marginLeft: sideCollapsed ? 64 : 220, flex: 1, transition: 'margin-left 0.2s', minHeight: '100vh' }}>
+      {/* Main scrollable content */}
+      <div style={{ marginLeft: collapsed ? 60 : 220, flex: 1, minHeight: '100vh', overflowY: 'auto', transition: 'margin-left 0.2s' }}>
         {children}
       </div>
     </div>
